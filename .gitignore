@@ -1,0 +1,4 @@
+.env
+tutoring_records.csv
+__pycache__/
+*.pyc
