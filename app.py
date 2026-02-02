@@ -32,67 +32,129 @@ st.markdown("""
 
 st.title("📝 Elite Premier Tutoring Daily Sheet")
 
-# Form
-with st.form("tutoring_form"):
-    st.subheader("📘 Student Class Summary")
-    col1, col2 = st.columns(2)
-    with col1:
-        student_name = st.text_input("Student Name", placeholder="Ex: Jihu Park")
-        teacher_name = st.text_input("Teacher", placeholder="Ex: Gabe Waksman")
-    with col2:
-        class_date = st.date_input("Date", value=date.today())
-        subject = st.text_input("Subject", placeholder="Ex: Calculus & Physics")
+st.markdown("---")
 
-    col3, col4 = st.columns(2)
-    with col3:
-        start_time = st.time_input("Start Time", value=datetime.strptime("15:30", "%H:%M").time())
-    with col4:
-        end_time = st.time_input("End Time", value=datetime.strptime("17:30", "%H:%M").time())
+# Shared Options
+subject_options = [
+    "Select Subject",
+    "Manual Entry",
+    "Algebra 1",
+    "Algebra 2",
+    "Geometry",
+    "Pre-Calculus / AP Pre-Cal",
+    "AP Calculus AB / BC",
+    "AP Statistics",
+    "Biology (Reg./Honors/AP)",
+    "Chemistry (Reg./Honors/AP)",
+    "Physics (General/Honors/AP Physics 1, 2, C)",
+    "AP Environmental Science",
+    "English 9 - 12",
+    "AP English Lang / AP English Lit",
+    "ESOL / ESL/ELL",
+    "Standardized Tests: SAT / ACT",
+    "AP Exam Prep",
+    "GPA Management",
+    "College Essay"
+]
 
-    st.markdown("---")
-    st.subheader("📝 School Homework & Exam Check")
+st.subheader("📘 Student Tutoring Summary")
+col1, col2 = st.columns(2)
+with col1:
+    student_name = st.text_input("Student Name", placeholder="Please enter student first name")
+    teacher_name = st.text_input("Teacher", placeholder="Please type your name")
+with col2:
+    class_date = st.date_input("Date", value=date.today())
+
+    subject_selection = st.selectbox("Subject", subject_options)
     
-    col5, col6 = st.columns(2)
-    with col5:
-        st.markdown("**School Homework**")
-        has_homework = st.selectbox("Has Homework?", ["Yes", "No"], key="homework_status")
-        homework_subject = st.text_input("Homework Subject", disabled=(has_homework == "No"), key="homework_sub")
-        homework_due = st.text_input("Due Date", disabled=(has_homework == "No"), key="homework_due")
-    
-    with col6:
-        st.markdown("**School Exam**")
-        has_exam = st.selectbox("Has Exam?", ["Yes", "No"], key="exam_status")
-        exam_subject = st.text_input("Exam Subject", disabled=(has_exam == "No"), key="exam_sub")
-        exam_date = st.text_input("Exam Date", disabled=(has_exam == "No"), key="exam_date")
-
-    st.markdown("---")
-    st.subheader("📚 Class Content")
-    lesson_content = st.text_area("Lesson Content", placeholder="Ex: Physics: Momentum\nCalculus: Logistic Growth", height=150)
-
-    st.markdown("---")
-    st.subheader("👨🎓 Attitude & Participation")
-    attitude_options = [
-        "Excellent attitude and active participation (Great!)",
-        "Good attitude (Good)",
-        "Needs more focus (Needs Focus)",
-        "Custom Input"
-    ]
-    attitude_selection = st.selectbox("Select Attitude", attitude_options)
-    
-    if attitude_selection == "Custom Input":
-        attitude = st.text_area("Attitude & Participation Details", height=100)
+    if subject_selection == "Manual Entry":
+        subject = st.text_input("Enter Subject Manually", placeholder="Ex: Calculus & Physics")
     else:
-        attitude = st.text_area("Attitude & Participation Details", value=attitude_selection, height=100)
+        subject = subject_selection
 
-    st.markdown("---")
-    st.subheader("🧪 Quiz & Check")
-    quiz = st.text_area("Example: Conducted a brief oral quiz, student answered questions to check understanding.")
+col3, col4 = st.columns(2)
+with col3:
+    start_time = st.time_input("Start Time", value=datetime.strptime("15:30", "%H:%M").time())
+with col4:
+    end_time = st.time_input("End Time", value=datetime.strptime("17:30", "%H:%M").time())
 
-    st.markdown("---")
-    st.subheader("🏠 Today's Homework (Elite Homework)")
-    elite_homework = st.text_area("Elite Homework", placeholder="Ex: Complete remaining Physics problems")
+st.markdown("---")
+st.subheader("📝 Elite Homework Check")
+elite_homework_options = [
+    "Select Elite Homework Status",
+    "Absolutely perfect.",
+    "Great work.",
+    "Needs more review.",
+    "More focus needed.",
+    "Assignment missing."
+]
+elite_homework_status = st.selectbox("Elite Homework Status", elite_homework_options, label_visibility="collapsed")
+elite_homework_comment = st.text_input("Comment (optional)")
 
-    submitted = st.form_submit_button("Submit")
+st.markdown("---")
+st.subheader("📝 School Homework & Exam Check")
+
+col5, col6 = st.columns(2)
+with col5:
+    st.markdown("**School Homework**")
+    has_homework = st.selectbox("Has Homework?", ["Yes", "No"], key="homework_status")
+    
+    if has_homework == "Yes":
+        homework_subject_selection = st.selectbox("Homework Subject", subject_options, key="homework_sub_select")
+        if homework_subject_selection == "Manual Entry":
+            homework_subject = st.text_input("Enter Homework Subject Manually", key="homework_sub_manual")
+        else:
+            homework_subject = homework_subject_selection
+    else:
+        homework_subject = ""
+        st.text_input("Homework Subject", value="N/A", disabled=True, key="homework_sub_disabled")
+
+    homework_due = st.date_input("Due Date", disabled=(has_homework == "No"), key="homework_due")
+
+with col6:
+    st.markdown("**School Exam**")
+    has_exam = st.selectbox("Has Exam?", ["Yes", "No"], key="exam_status")
+    
+    if has_exam == "Yes":
+        exam_subject_selection = st.selectbox("Exam Subject", subject_options, key="exam_sub_select")
+        if exam_subject_selection == "Manual Entry":
+            exam_subject = st.text_input("Enter Exam Subject Manually", key="exam_sub_manual")
+        else:
+            exam_subject = exam_subject_selection
+    else:
+        exam_subject = ""
+        st.text_input("Exam Subject", value="N/A", disabled=True, key="exam_sub_disabled")
+
+    exam_date = st.date_input("Exam Date", disabled=(has_exam == "No"), key="exam_date")
+
+st.markdown("---")
+st.subheader("📚 Detailed Tutoring Content")
+lesson_content = st.text_area("Detailed Tutoring Content", label_visibility="collapsed", placeholder="Ex: Physics: Momentum\nCalculus: Logistic Growth", height=150)
+
+st.markdown("---")
+st.subheader("👨🎓 Attitude & Participation")
+attitude_options = [
+    "Excellent attitude and active participation (Great!)",
+    "Good attitude (Good)",
+    "Needs more focus (Needs Focus)",
+    "Manual Input"
+]
+attitude_selection = st.selectbox("Select Attitude", attitude_options)
+
+if attitude_selection == "Manual Input":
+    attitude = st.text_area("Attitude & Participation Details", height=100)
+else:
+    attitude = st.text_area("Attitude & Participation Details", value=attitude_selection, height=100)
+
+st.markdown("---")
+st.subheader("🧪 Quiz & Check")
+quiz = st.text_area("Example: Conducted a brief oral quiz, student answered questions to check understanding.")
+
+st.markdown("---")
+st.subheader("🏠 Today's Homework (Elite Homework)")
+elite_homework = st.text_area("Elite Homework", placeholder="Ex: Complete remaining Physics problems")
+
+submitted = st.button("Submit")
 
 def calculate_duration(start, end):
     dummy_date = date.today()
