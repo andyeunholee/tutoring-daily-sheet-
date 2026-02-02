@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date
+from datetime import time, datetime, date, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -23,7 +23,8 @@ st.markdown("""
     h1 {
         text-align: center;
         color: #2E86C1;
-        font-size: 1.8rem;
+        font-size: 1.75rem !important;
+        font-weight: 600 !important;
     }
     .stTextArea textarea {
         height: 150px;
@@ -31,7 +32,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📝 Elite Premier Tutoring Daily Sheet")
+st.title("📝 EP Tutoring Daily Sheet")
 
 st.markdown("---")
 
@@ -58,11 +59,23 @@ subject_options = [
     "College Essay"
 ]
 
+# Generate time options for selectbox
+time_options = []
+start_time_dt = datetime.strptime("12:00 AM", "%I:%M %p")
+end_time_dt = datetime.strptime("11:30 PM", "%I:%M %p")
+current_time_dt = start_time_dt
+while current_time_dt <= end_time_dt:
+    time_options.append(current_time_dt.strftime("%I:%M %p"))
+    current_time_dt += timedelta(minutes=30)
+
 st.subheader("📘 Student Tutoring Summary")
 col1, col2 = st.columns(2)
 with col1:
     student_name = st.text_input("Student Name", placeholder="Please enter student first name")
     teacher_name = st.text_input("Teacher", placeholder="Please type your name")
+    
+    # Start Time
+    start_time_str = st.selectbox("Start Time", time_options, index=time_options.index("03:30 PM") if "03:30 PM" in time_options else 0)
 with col2:
     class_date = st.date_input("Date", value=date.today())
 
@@ -73,11 +86,12 @@ with col2:
     else:
         subject = subject_selection
 
-col3, col4 = st.columns(2)
-with col3:
-    start_time = st.time_input("Start Time", value=datetime.strptime("15:30", "%H:%M").time())
-with col4:
-    end_time = st.time_input("End Time", value=datetime.strptime("17:30", "%H:%M").time())
+    # End Time
+    end_time_str = st.selectbox("End Time", time_options, index=time_options.index("05:30 PM") if "05:30 PM" in time_options else 4)
+
+    # Convert strings back to datetime objects for calculation
+    start_time = datetime.strptime(start_time_str, "%I:%M %p").time()
+    end_time = datetime.strptime(end_time_str, "%I:%M %p").time()
 
 st.markdown("---")
 st.subheader("📝 Elite Homework Check")
