@@ -69,29 +69,35 @@ while current_time_dt <= end_time_dt:
     current_time_dt += timedelta(minutes=30)
 
 st.subheader("📘 Student Tutoring Summary")
-col1, col2 = st.columns(2)
-with col1:
+# Row 1: Student Name and Date
+row1_col1, row1_col2 = st.columns(2)
+with row1_col1:
     student_name = st.text_input("Student Name", placeholder="Please enter student first name")
-    teacher_name = st.text_input("Teacher", placeholder="Please type your name")
-    
-    # Start Time
-    start_time_str = st.selectbox("Start Time", time_options, index=time_options.index("03:30 PM") if "03:30 PM" in time_options else 0)
-with col2:
+with row1_col2:
     class_date = st.date_input("Date", value=date.today())
 
+# Row 2: Teacher and Subject
+row2_col1, row2_col2 = st.columns(2)
+with row2_col1:
+    teacher_name = st.text_input("Teacher", placeholder="Please type your name")
+with row2_col2:
     subject_selection = st.selectbox("Subject", subject_options)
     
     if subject_selection == "Manual Entry":
-        subject = st.text_input("Enter Subject Manually", placeholder="Ex: Calculus & Physics")
+        subject = st.text_input("Enter Subject Manually")
     else:
         subject = subject_selection
 
-    # End Time
+# Row 3: Start Time and End Time
+row3_col1, row3_col2 = st.columns(2)
+with row3_col1:
+    start_time_str = st.selectbox("Start Time", time_options, index=time_options.index("03:30 PM") if "03:30 PM" in time_options else 0)
+with row3_col2:
     end_time_str = st.selectbox("End Time", time_options, index=time_options.index("05:30 PM") if "05:30 PM" in time_options else 4)
 
-    # Convert strings back to datetime objects for calculation
-    start_time = datetime.strptime(start_time_str, "%I:%M %p").time()
-    end_time = datetime.strptime(end_time_str, "%I:%M %p").time()
+# Convert strings back to datetime objects for calculation
+start_time = datetime.strptime(start_time_str, "%I:%M %p").time()
+end_time = datetime.strptime(end_time_str, "%I:%M %p").time()
 
 st.markdown("---")
 st.subheader("📝 Elite Homework Check")
