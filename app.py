@@ -24,7 +24,6 @@ st.markdown("""
         text-align: center;
         color: #2E86C1;
         font-size: 1.8rem;
-        white-space: nowrap;
     }
     .stTextArea textarea {
         height: 150px;
