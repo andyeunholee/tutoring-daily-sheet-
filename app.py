@@ -74,7 +74,7 @@ row1_col1, row1_col2 = st.columns(2)
 with row1_col1:
     student_name = st.text_input("Student Name", placeholder="Please enter student first name")
 with row1_col2:
-    class_date = st.date_input("Date", value=date.today())
+    class_date = st.date_input("Date", value=date.today(), format="MM/DD/YYYY")
 
 # Row 2: Teacher and Subject
 row2_col1, row2_col2 = st.columns(2)
@@ -130,7 +130,7 @@ with col5:
         homework_subject = ""
         st.text_input("Homework Subject", value="N/A", disabled=True, key="homework_sub_disabled")
 
-    homework_due = st.date_input("Due Date", disabled=(has_homework == "No"), key="homework_due")
+    homework_due = st.date_input("Due Date", disabled=(has_homework == "No"), key="homework_due", format="MM/DD/YYYY")
 
 with col6:
     st.markdown("**School Exam**")
@@ -146,7 +146,7 @@ with col6:
         exam_subject = ""
         st.text_input("Exam Subject", value="N/A", disabled=True, key="exam_sub_disabled")
 
-    exam_date = st.date_input("Exam Date", disabled=(has_exam == "No"), key="exam_date")
+    exam_date = st.date_input("Exam Date", disabled=(has_exam == "No"), key="exam_date", format="MM/DD/YYYY")
 
 st.markdown("---")
 st.subheader("📚 Detailed Tutoring Content")
@@ -191,18 +191,27 @@ def calculate_duration(start, end):
 def format_time_ampm(t):
     return t.strftime("%I:%M %p")
 
-def send_email(subject, body, to_email):
+def send_email(subject, text_body, html_body, to_email):
     sender_email = os.getenv("SENDER_EMAIL")
     sender_password = os.getenv("SENDER_PASSWORD")
     
     if not sender_email or not sender_password:
         return False, "Email configuration missing. Please check .env file."
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = sender_email
     msg['To'] = to_email
     msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+
+    # Record the MIME types of both parts - text/plain and text/html.
+    part1 = MIMEText(text_body, 'plain')
+    part2 = MIMEText(html_body, 'html')
+
+    # Attach parts into message container.
+    # According to RFC 2046, the last part of a multipart message, in this case
+    # the HTML message, is best and preferred.
+    msg.attach(part1)
+    msg.attach(part2)
 
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -221,44 +230,104 @@ if submitted:
     start_time_str = format_time_ampm(start_time)
     end_time_str = format_time_ampm(end_time)
     
-    # 2. Generate Email Body
-    email_body = f"""
-Hello, here is the summary of today's tutoring session.
+    # 2. Generate Email Body (Text Version)
+    text_body = f"""Hello,
+Below is a brief summary of today’s tutoring session.
 
-📘 Student Class Summary
-Student Name: {student_name}
-Date: {class_date.strftime('%Y-%m-%d')}
-Time: {start_time_str} – {end_time_str} ({duration})
-Teacher: {teacher_name}
-Subject: {subject}
-
+📘 Student Session Summary
+• Student Name: {student_name}
+• Date: {class_date.strftime('%B %d, %Y')}
+• Time: {start_time_str} – {end_time_str} ({duration})
+• Instructor: {teacher_name}
+• Subjects: {subject}
+----------------------------------
 📝 School Homework & Exam Check
-School Homework: {has_homework}
-"""
+• School Homework: {has_homework}"""
+
     if has_homework == "Yes":
-        email_body += f"\nSubject: {homework_subject}\n\nDue Date: {homework_due}\n"
+        text_body += f"\n• Subject: {homework_subject}\n• Due Date: {homework_due.strftime('%m/%d/%Y')}"
     
-    email_body += f"\nSchool Exam: {has_exam}\n"
+    text_body += f"\n• School Exam: {has_exam}"
     
     if has_exam == "Yes":
-        email_body += f"\nSubject: {exam_subject}\n\nExam Date: {exam_date}\n"
+        text_body += f"\n• Subject: {exam_subject}\n• Exam Date: {exam_date.strftime('%m/%d/%Y')}"
 
-    email_body += f"""
-📚 Class Content
-{lesson_content}
-
-👨🎓 Attitude & Participation
-{attitude}
-
-🧪 Quiz & Check
-{quiz}
-
-🏠 Today's Homework (Elite Homework)
-{elite_homework}
-
+    text_body += f"""
+-----------------------------------
+📚 Topics Covered in Class
+• {lesson_content}
+-----------------------------------
+👨🎓 Student Attitude & Participation
+• {attitude}
+-----------------------------------
+🧪 Quiz & Assessment
+• {quiz}
+-----------------------------------
+🏠 Today’s Homework (Elite Homework)
+• {elite_homework}
 
 Thank you.
 """
+
+    # 3. Generate Email Body (HTML Version)
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+        <p>Hello,<br>Below is a brief summary of today’s tutoring session.</p>
+
+        <h3 style="color: #2E86C1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">📘 Student Session Summary</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
+            <li>• <strong>Student Name:</strong> {student_name}</li>
+            <li>• <strong>Date:</strong> {class_date.strftime('%B %d, %Y')}</li>
+            <li>• <strong>Time:</strong> {start_time_str} – {end_time_str} ({duration})</li>
+            <li>• <strong>Instructor:</strong> {teacher_name}</li>
+            <li>• <strong>Subjects:</strong> {subject}</li>
+        </ul>
+
+        <h3 style="color: #2E86C1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">📝 School Homework & Exam Check</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
+            <li>• <strong>School Homework:</strong> {has_homework}</li>"""
+            
+    if has_homework == "Yes":
+        html_body += f"""
+            <li>• <strong>Subject:</strong> {homework_subject}</li>
+            <li>• <strong>Due Date:</strong> {homework_due.strftime('%m/%d/%Y')}</li>"""
+            
+    html_body += f"""
+            <li>• <strong>School Exam:</strong> {has_exam}</li>"""
+            
+    if has_exam == "Yes":
+        html_body += f"""
+            <li>• <strong>Subject:</strong> {exam_subject}</li>
+            <li>• <strong>Exam Date:</strong> {exam_date.strftime('%m/%d/%Y')}</li>"""
+
+    html_body += f"""
+        </ul>
+
+        <h3 style="color: #2E86C1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">📚 Topics Covered in Class</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
+            <li>• {lesson_content}</li>
+        </ul>
+
+        <h3 style="color: #2E86C1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">👨🎓 Student Attitude & Participation</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
+            <li>• {attitude}</li>
+        </ul>
+
+        <h3 style="color: #2E86C1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">🧪 Quiz & Assessment</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
+            <li>• {quiz}</li>
+        </ul>
+
+        <h3 style="color: #2E86C1; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px;">🏠 Today’s Homework (Elite Homework)</h3>
+        <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
+            <li>• {elite_homework}</li>
+        </ul>
+
+        <p style="margin-top: 30px;">Thank you.</p>
+    </body>
+    </html>
+    """
     
     # 3. Save Data (CSV)
     data = {
@@ -287,15 +356,15 @@ Thank you.
     # 4. Send Email
     receiver_email = os.getenv("RECEIVER_EMAIL")
     if receiver_email:
-        email_subject = f"[Tutoring Report] {student_name} - {class_date.strftime('%Y-%m-%d')}"
-        success, msg = send_email(email_subject, email_body, receiver_email)
+        email_subject = f"[Tutoring Report] {student_name} - {class_date.strftime('%m/%d/%Y')}"
+        success, msg = send_email(email_subject, text_body, html_body, receiver_email)
         if success:
             st.success(msg)
             with st.expander("View Sent Email"):
-                st.text(email_body)
+                st.components.v1.html(html_body, height=600, scrolling=True)
         else:
             st.error(msg)
     else:
         st.warning("Receiver email not configured.")
         with st.expander("View Generated Report"):
-             st.text(email_body)
+             st.components.v1.html(html_body, height=600, scrolling=True)
