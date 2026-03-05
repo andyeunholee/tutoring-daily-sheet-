@@ -88,16 +88,11 @@ with row2_col2:
     else:
         subject = subject_selection
 
-# Row 3: Start Time and End Time
-row3_col1, row3_col2 = st.columns(2)
-with row3_col1:
-    start_time_str = st.selectbox("Start Time", time_options, index=time_options.index("03:30 PM") if "03:30 PM" in time_options else 0)
-with row3_col2:
-    end_time_str = st.selectbox("End Time", time_options, index=time_options.index("05:30 PM") if "05:30 PM" in time_options else 4)
+# Row 3: Start Time
+start_time_str = st.selectbox("Start Time", time_options, index=time_options.index("03:30 PM") if "03:30 PM" in time_options else 0)
 
-# Convert strings back to datetime objects for calculation
+# Convert string back to datetime object
 start_time = datetime.strptime(start_time_str, "%I:%M %p").time()
-end_time = datetime.strptime(end_time_str, "%I:%M %p").time()
 
 st.markdown("---")
 st.subheader("📝 Elite Homework Check")
@@ -163,13 +158,28 @@ attitude_options = [
 attitude_selection = st.selectbox("Select Attitude", attitude_options)
 
 if attitude_selection == "Manual Input":
-    attitude = st.text_area("Attitude & Participation Details", height=100)
+    attitude = st.text_input("Attitude & Participation Details")
 else:
-    attitude = st.text_area("Attitude & Participation Details", value=attitude_selection, height=100)
+    attitude = attitude_selection
 
 st.markdown("---")
 st.subheader("🧪 Quiz & Check")
-quiz = st.text_area("Example: Conducted a brief oral quiz, student answered questions to check understanding.")
+quiz_options = [
+    "Select Quiz Status",
+    "No quiz conducted this session; focused on introducing new material.",
+    "Conducted a brief oral quiz; student answered all questions correctly.",
+    "Reviewed key concepts through Q&A; student demonstrated solid understanding.",
+    "Administered a short written quiz; student showed good comprehension.",
+    "Tested understanding through practice problems; student needs more review on some topics.",
+    "Checked understanding via oral questions; student struggled and requires additional practice.",
+    "Manual Input"
+]
+quiz_selection = st.selectbox("Quiz Status", quiz_options, label_visibility="collapsed")
+
+if quiz_selection == "Manual Input":
+    quiz = st.text_input("Quiz & Check Details")
+else:
+    quiz = quiz_selection
 
 st.markdown("---")
 st.subheader("🏠 Today's Homework (Elite Homework)")
@@ -225,10 +235,8 @@ def send_email(subject, text_body, html_body, to_email):
         return False, f"Failed to send email: {str(e)}"
 
 if submitted:
-    # 1. Calculation
-    duration = calculate_duration(start_time, end_time)
+    # 1. Format time
     start_time_str = format_time_ampm(start_time)
-    end_time_str = format_time_ampm(end_time)
     
     # 2. Generate Email Body (Text Version)
     text_body = f"""Hello,
@@ -237,7 +245,7 @@ Below is a brief summary of today’s tutoring session.
 📘 Student Session Summary
 • Student Name: {student_name}
 • Date: {class_date.strftime('%B %d, %Y')}
-• Time: {start_time_str} – {end_time_str} ({duration})
+• Time: {start_time_str}
 • Instructor: {teacher_name}
 • Subjects: {subject}
 ----------------------------------
@@ -279,7 +287,7 @@ Thank you.
         <ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">
             <li>• <strong>Student Name:</strong> {student_name}</li>
             <li>• <strong>Date:</strong> {class_date.strftime('%B %d, %Y')}</li>
-            <li>• <strong>Time:</strong> {start_time_str} – {end_time_str} ({duration})</li>
+            <li>• <strong>Time:</strong> {start_time_str}</li>
             <li>• <strong>Instructor:</strong> {teacher_name}</li>
             <li>• <strong>Subjects:</strong> {subject}</li>
         </ul>
@@ -336,7 +344,6 @@ Thank you.
         "Teacher": [teacher_name],
         "Subject": [subject],
         "Start Time": [start_time_str],
-        "End Time": [end_time_str],
         "Content": [lesson_content],
         "Homework": [elite_homework],
         "School Homework": [has_homework],
