@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 from dotenv import load_dotenv
+import pytz
 
 # Load .env file
 load_dotenv()
@@ -35,6 +36,10 @@ st.markdown("""
 st.title("📝 EP Tutoring Daily Sheet")
 
 st.markdown("---")
+
+# Get current date in US Eastern time to prevent timezone issues in the evening
+eastern = pytz.timezone('America/New_York')
+current_date_est = datetime.now(eastern).date()
 
 # Shared Options
 subject_options = [
@@ -74,7 +79,7 @@ row1_col1, row1_col2 = st.columns(2)
 with row1_col1:
     student_name = st.text_input("Student Name", placeholder="Please enter student first name")
 with row1_col2:
-    class_date = st.date_input("Date", value=date.today(), format="MM/DD/YYYY")
+    class_date = st.date_input("Date", value=current_date_est, format="MM/DD/YYYY")
 
 # Row 2: Teacher and Subject
 row2_col1, row2_col2 = st.columns(2)
@@ -125,7 +130,7 @@ with col5:
         homework_subject = ""
         st.text_input("Homework Subject", value="N/A", disabled=True, key="homework_sub_disabled")
 
-    homework_due = st.date_input("Due Date", disabled=(has_homework == "No"), key="homework_due", format="MM/DD/YYYY")
+    homework_due = st.date_input("Due Date", value=current_date_est, disabled=(has_homework == "No"), key="homework_due", format="MM/DD/YYYY")
 
 with col6:
     st.markdown("**School Exam**")
@@ -141,7 +146,7 @@ with col6:
         exam_subject = ""
         st.text_input("Exam Subject", value="N/A", disabled=True, key="exam_sub_disabled")
 
-    exam_date = st.date_input("Exam Date", disabled=(has_exam == "No"), key="exam_date", format="MM/DD/YYYY")
+    exam_date = st.date_input("Exam Date", value=current_date_est, disabled=(has_exam == "No"), key="exam_date", format="MM/DD/YYYY")
 
 st.markdown("---")
 st.subheader("📚 Detailed Tutoring Content")
