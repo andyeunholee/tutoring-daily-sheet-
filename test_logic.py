@@ -1,9 +1,6 @@
 """Quick checks for the report rendering, roster parsing and the report store."""
 
 from datetime import date
-from pathlib import Path
-import tempfile
-import threading
 
 from src import report as report_lib
 from src import store
@@ -42,53 +39,32 @@ def test_missing_dates_do_not_crash():
     report_lib.render_html(blank)
 
 
-def test_store_round_trip():
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "reports.json"
-        rid = store.add(path, SAMPLE)
-        assert store.get(path, rid)["status"] == store.PENDING
-
-        edited = {**SAMPLE, "student_name": "Eunho Lee"}
-        store.update_report(path, rid, edited)
-        assert store.get(path, rid)["report"]["student_name"] == "Eunho Lee"
-
-        store.mark_sent(path, rid, "parent@x.com", "student@x.com")
-        entry = store.get(path, rid)
-        assert entry["status"] == store.SENT
-        assert entry["sent_to"] == "parent@x.com"
-
-        store.reopen(path, rid)
-        assert store.get(path, rid)["status"] == store.PENDING
-        assert store.delete(path, rid) and store.load_all(path) == []
+def test_report_survives_a_round_trip_through_a_sheet_row():
+    entry = {
+        "id": "abc123def456", "created_at": "2026-08-01T10:00:00-04:00",
+        "status": store.PENDING, "sent_at": None, "sent_to": "", "sent_cc": "",
+        "report": SAMPLE,
+    }
+    row = store.row_from_entry(entry)
+    assert len(row) == len(store.COLUMNS)
+    assert row[6] == "Eunho"            # student name is readable in the sheet
+    assert row[7] == "2026-02-01"       # so is the class date
+    assert store.entry_from_row(row) == entry
 
 
-def test_concurrent_submissions_do_not_drop_reports():
-    """Two teachers hitting Submit at the same moment must both be stored.
+def test_rows_the_sheets_api_actually_returns():
+    """Trailing empty cells come back missing, not blank, so short rows are normal."""
+    short = store.entry_from_row(["abc", "2026-08-01T10:00:00-04:00", "pending"])
+    assert short["status"] == "pending" and short["report"] == {}
+    assert short["sent_at"] is None
 
-    Saving is read-append-write, so without locking the later writer can save a
-    list it read before the earlier one appended, silently losing a report.
-    """
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "reports.json"
-        errors = []
-        start = threading.Barrier(12)
+    # Nothing here identifies a report; skip rather than build a broken entry.
+    assert store.entry_from_row([]) is None
+    assert store.entry_from_row(["", "", ""]) is None
 
-        def submit(i: int) -> None:
-            try:
-                start.wait()            # maximise the overlap
-                store.add(path, {**SAMPLE, "student_name": f"S{i:02d}"})
-            except Exception as e:
-                errors.append(e)
-
-        threads = [threading.Thread(target=submit, args=(i,)) for i in range(12)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert not errors, errors
-        stored = sorted(e["report"]["student_name"] for e in store.load_all(path))
-        assert stored == [f"S{i:02d}" for i in range(12)], f"lost: {stored}"
+    # A hand-edited sheet can leave unparseable JSON. Keep the row, drop the body.
+    mangled = store.entry_from_row(["xyz", "", "sent", "", "", "", "", "", "{oops"])
+    assert mangled["id"] == "xyz" and mangled["report"] == {}
 
 
 ROSTER_ROWS = [

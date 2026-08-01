@@ -5,5 +5,7 @@ pending_reports.json.tmp
 pending_reports.json.lock
 credentials.json
 token_tutoring.json
+service_account.json
+.streamlit/secrets.toml
 __pycache__/
 *.pyc

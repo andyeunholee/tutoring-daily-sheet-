@@ -253,7 +253,7 @@ if submitted:
     st.success("Data saved successfully!")
 
     # 3. Queue it for the director's review app
-    store.add(config.REPORTS_PATH, entry, config.LOCAL_TZ)
+    store.add(entry, config.LOCAL_TZ)
 
     # 4. Send Email to the director
     if config.RECEIVER_EMAIL:

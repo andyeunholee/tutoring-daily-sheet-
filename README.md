@@ -87,6 +87,55 @@ STUDENTS_SPREADSHEET_ID=<위에서 복사한 시트 ID>
 - **⚙️ More**: 발송 완료 건을 다시 대기로 되돌리거나 삭제
 - **🔄 Reload roster**: 시트를 수정한 뒤 눌러 새로 읽기 (캐시 5분)
 
+## Streamlit Community Cloud 배포
+
+집·학원 어디서든 열려면 앱을 클라우드에 올려야 합니다. 로컬에서만 쓸 거라면
+이 절은 건너뛰세요.
+
+### 준비물
+
+| 항목 | 설명 |
+|---|---|
+| 서비스 계정 | 클라우드에는 브라우저가 없어서 구글 로그인 창을 띄울 수 없습니다. 사람 대신 인증할 서비스 계정이 필요합니다 |
+| 시트 공유 | 서비스 계정은 자기만의 이메일(`...iam.gserviceaccount.com`)을 가집니다. **Students는 뷰어**, **Reports는 편집자**로 그 주소에 공유해야 합니다 |
+| Reports 시트 | 리포트가 쌓일 곳. 클라우드는 재시작 시 파일이 지워져서 로컬 JSON을 쓸 수 없습니다 |
+
+### 배포 순서
+
+1. https://share.streamlit.io 에서 GitHub 계정으로 로그인
+2. **New app** → 이 저장소 선택 → Main file path에 **`review_app.py`** 입력 → Deploy
+3. 앱 화면 우측 하단 **Manage app** → **⋮** → **Settings** → **Secrets** 에 아래를 붙여넣고 저장
+
+```toml
+SENDER_EMAIL = "andy.lee@eliteprep.com"
+SENDER_PASSWORD = "Gmail 앱 비밀번호"
+RECEIVER_EMAIL = "andy.lee@eliteprep.com"
+ADMIN_PASSWORD = "검토 앱 비밀번호"
+
+STUDENTS_SPREADSHEET_ID = "명부 시트 ID"
+REPORTS_SPREADSHEET_ID = "리포트 시트 ID"
+
+[gcp_service_account]
+# service_account.json 의 내용을 그대로 옮겨 적습니다.
+type = "service_account"
+project_id = "..."
+private_key_id = "..."
+private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+client_email = "...@....iam.gserviceaccount.com"
+client_id = "..."
+token_uri = "https://oauth2.googleapis.com/token"
+```
+
+`private_key` 는 줄바꿈이 `\n` 문자 그대로 들어가야 하고, 전체를 큰따옴표로 감싸야
+합니다. JSON 파일에 있는 형태 그대로 복사하면 맞습니다.
+
+4. 선생님 폼도 쓰려면 **New app** 을 한 번 더 눌러 Main file path만 **`app.py`** 로
+   지정해 배포합니다. Secrets는 앱마다 따로 넣어야 합니다.
+
+`ADMIN_PASSWORD` 가 없으면 검토 앱은 열리지 않고 오류만 표시합니다. 인터넷에
+공개되는 순간 학부모 주소 전체가 노출되고 원장님 계정으로 메일이 나갈 수 있어서,
+비워둔 채로는 뜨지 않도록 막아두었습니다.
+
 ## 웹사이트에 바로가기 링크 걸기
 
 원장님 웹사이트에 이런 링크를 두면 검토 앱이 바로 열립니다.
@@ -112,7 +161,7 @@ app.py                 선생님 입력 폼
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
 src/report.py          리포트 필드 정의와 이메일 HTML·텍스트 생성 (두 앱 공용)
-src/store.py           제출 리포트 저장 + 발송 상태 (pending_reports.json)
+src/store.py           제출 리포트 저장 + 발송 상태 (Reports Google Sheet)
 src/mailer.py          SMTP 발송 (To/Cc)
 src/students.py        Google Sheet 학생 명부 읽기
 src/auth.py            구글 OAuth

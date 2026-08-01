@@ -24,6 +24,33 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
+# --- Password gate -------------------------------------------------------
+# This app lists every parent's address and can send mail as SENDER_EMAIL, so
+# it must not be openable by anyone who happens to have the URL.
+def require_password() -> bool:
+    if not config.ADMIN_PASSWORD:
+        st.error("ADMIN_PASSWORD is not set, so this app is refusing to open.")
+        st.caption("Set it in .env locally, or in the app's secrets when deployed.")
+        return False
+    if st.session_state.get("authed"):
+        return True
+
+    st.title("📬 Tutoring Report Review")
+    with st.form("login"):
+        pw = st.text_input("Password", type="password")
+        if st.form_submit_button("Enter"):
+            if pw == config.ADMIN_PASSWORD:
+                st.session_state["authed"] = True
+                st.rerun()
+            else:
+                st.error("Wrong password.")
+    return False
+
+
+if not require_password():
+    st.stop()
+
+
 # --- Student roster (Google Sheet) ---------------------------------------
 @st.cache_data(ttl=300, show_spinner="Loading student roster...")
 def load_roster() -> tuple[list, str]:
@@ -33,10 +60,9 @@ def load_roster() -> tuple[list, str]:
         return [], ("STUDENTS_SPREADSHEET_ID is not set in .env, so parent/student "
                     "emails cannot be looked up. Enter them by hand below.")
     try:
-        from src.auth import get_credentials
+        from src.auth import default_credentials
         from src.students import load_students
-        creds = get_credentials(
-            str(config.CREDENTIALS_PATH), str(config.TOKEN_PATH), config.SCOPES)
+        creds = default_credentials()
         return load_students(creds, config.STUDENTS_SPREADSHEET_ID,
                              config.STUDENTS_RANGE), ""
     except FileNotFoundError:
@@ -56,7 +82,7 @@ while _t <= datetime.strptime("11:30 PM", "%I:%M %p"):
     TIME_OPTIONS.append(_t.strftime("%I:%M %p"))
     _t += timedelta(minutes=30)
 
-all_entries = store.load_all(config.REPORTS_PATH)
+all_entries = store.load_all()
 open_ids = {e["id"] for e in all_entries if e.get("status") != store.SENT}
 
 
@@ -68,7 +94,7 @@ def watch_for_new_reports(known: set) -> None:
     report selector or interrupt typing: picking the moment to reload stays
     with the reviewer.
     """
-    arrived = {e["id"] for e in store.load_all(config.REPORTS_PATH)
+    arrived = {e["id"] for e in store.load_all()
                if e.get("status") != store.SENT} - known
     if not arrived:
         return
@@ -226,7 +252,7 @@ with side_col:
     b1, b2 = st.columns(2)
     with b1:
         if st.button("💾 Save edits", use_container_width=True):
-            store.update_report(config.REPORTS_PATH, entry_id, edited)
+            store.update_report(entry_id, edited)
             st.success("Saved.")
     with b2:
         send_clicked = st.button("📨 Send to parent", type="primary",
@@ -256,14 +282,14 @@ with side_col:
         if c1.button("✅ Yes, send", type="primary", key=k + "confirm_yes",
                      use_container_width=True):
             del st.session_state[confirming]
-            store.update_report(config.REPORTS_PATH, entry_id, edited)
+            store.update_report(entry_id, edited)
             ok, msg = send_email(
                 subject_line, report_lib.render_text(edited),
                 report_lib.render_html(edited), to_addr, cc_addr,
                 sender=config.SENDER_EMAIL, password=config.SENDER_PASSWORD,
                 host=config.SMTP_HOST, port=config.SMTP_PORT)
             if ok:
-                store.mark_sent(config.REPORTS_PATH, entry_id, to_addr, cc_addr,
+                store.mark_sent(entry_id, to_addr, cc_addr,
                                 config.LOCAL_TZ)
                 st.success(f"Sent to {to_addr}" + (f" (cc {cc_addr})" if cc_addr else ""))
                 st.rerun()
@@ -275,10 +301,10 @@ with side_col:
 
     with st.expander("⚙️ More"):
         if choice.get("status") == store.SENT and st.button("↩️ Move back to Pending"):
-            store.reopen(config.REPORTS_PATH, entry_id)
+            store.reopen(entry_id)
             st.rerun()
         if st.button("🗑️ Delete this report"):
-            store.delete(config.REPORTS_PATH, entry_id)
+            store.delete(entry_id)
             st.rerun()
 
     st.subheader("👀 Preview")
