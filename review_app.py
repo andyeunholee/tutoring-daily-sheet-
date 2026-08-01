@@ -89,7 +89,13 @@ while _t <= datetime.strptime("11:30 PM", "%I:%M %p"):
     TIME_OPTIONS.append(_t.strftime("%I:%M %p"))
     _t += timedelta(minutes=30)
 
-all_entries = store.load_all()
+try:
+    all_entries = store.load_all()
+except Exception as e:
+    st.error(f"Could not read the reports sheet: {e}")
+    st.caption("The submitted reports are safe in the sheet; only this app is "
+               "failing to read them.")
+    st.stop()
 open_ids = {e["id"] for e in all_entries if e.get("status") != store.SENT}
 
 
@@ -101,7 +107,11 @@ def watch_for_new_reports(known: set) -> None:
     report selector or interrupt typing: picking the moment to reload stays
     with the reviewer.
     """
-    arrived = {e["id"] for e in store.load_all()
+    try:
+        current = store.load_all()
+    except Exception:
+        return          # a blip while polling must not take the page down
+    arrived = {e["id"] for e in current
                if e.get("status") != store.SENT} - known
     if not arrived:
         return
