@@ -44,7 +44,7 @@ def require_password() -> bool:
 
     st.title("📬 Tutoring Report Review")
     with st.form("login"):
-        pw = st.text_input("Password", type="password")
+        pw = st.text_input("Password (enter 4-digits)", type="password")
         if st.form_submit_button("Enter"):
             if pw == config.ADMIN_PASSWORD:
                 st.session_state["authed"] = True
