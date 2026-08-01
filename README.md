@@ -5,10 +5,18 @@
 
 ## 앱 두 개
 
-| 앱 | 누가 | 실행 명령 |
+| 앱 | 누가 | 주소 |
 |---|---|---|
-| `app.py` | 선생님 | `streamlit run app.py` |
-| `review_app.py` | 원장님 | `streamlit run review_app.py --server.port 8502` |
+| `app.py` | 선생님 | http://localhost:8501 |
+| `review_app.py` | 원장님 | http://localhost:8502 |
+
+**`start_apps.bat` 을 더블클릭하면 두 앱이 한 번에 뜹니다.** 최소화된 창 두 개가
+남는데, 그 창을 닫으면 앱이 꺼집니다. 직접 실행하려면:
+
+```bash
+streamlit run app.py
+streamlit run review_app.py --server.port 8502
+```
 
 선생님이 Submit을 누르면 리포트가 `pending_reports.json`에 "검토 대기"로 쌓이고,
 동시에 원장님 이메일(`RECEIVER_EMAIL`)로 발송됩니다. 원장님은 검토 앱에서 그
@@ -79,9 +87,27 @@ STUDENTS_SPREADSHEET_ID=<위에서 복사한 시트 ID>
 - **⚙️ More**: 발송 완료 건을 다시 대기로 되돌리거나 삭제
 - **🔄 Reload roster**: 시트를 수정한 뒤 눌러 새로 읽기 (캐시 5분)
 
+## 웹사이트에 바로가기 링크 걸기
+
+원장님 웹사이트에 이런 링크를 두면 검토 앱이 바로 열립니다.
+
+```html
+<a href="http://localhost:8502/" target="_blank" rel="noopener">튜터링 리포트 검토</a>
+```
+
+**이 링크는 앱이 실행 중인 그 PC에서만 동작합니다.** `localhost` 는 "지금 이 컴퓨터"를
+뜻하므로, 다른 사람이 웹사이트에서 이 링크를 클릭하면 자기 컴퓨터의 8502 를 찾다가
+실패합니다. 원장님 전용 바로가기로 쓰는 건 문제없지만, 남과 공유하는 링크로는
+동작하지 않습니다.
+
+링크를 누르기 전에 `start_apps.bat` 이 실행돼 있어야 합니다. PC를 켤 때마다 자동으로
+띄우려면 `start_apps.bat` 의 바로가기를 시작프로그램 폴더에 넣으면 됩니다
+(`Win+R` → `shell:startup`).
+
 ## 파일 구조
 
 ```
+start_apps.bat         두 앱을 한 번에 실행
 app.py                 선생님 입력 폼
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
