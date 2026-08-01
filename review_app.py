@@ -31,6 +31,13 @@ def require_password() -> bool:
     if not config.ADMIN_PASSWORD:
         st.error("ADMIN_PASSWORD is not set, so this app is refusing to open.")
         st.caption("Set it in .env locally, or in the app's secrets when deployed.")
+        # Say whether secrets loaded at all: a TOML error there looks exactly
+        # like a missing password otherwise. Names only, never values.
+        try:
+            names = sorted(st.secrets.keys())
+            st.caption(f"Secrets the app can see: {names or '(none)'}")
+        except Exception as e:
+            st.caption(f"Secrets could not be read at all: {type(e).__name__}: {e}")
         return False
     if st.session_state.get("authed"):
         return True
