@@ -28,7 +28,11 @@ st.markdown("""
 # This app lists every parent's address and can send mail as SENDER_EMAIL, so
 # it must not be openable by anyone who happens to have the URL.
 def require_password() -> bool:
-    if not config.ADMIN_PASSWORD:
+    # Read it on every check, not once at import: a password gets rotated, and
+    # a value frozen at process start keeps letting the old one through until
+    # someone thinks to reboot the app.
+    expected = config.setting("ADMIN_PASSWORD")
+    if not expected:
         st.error("ADMIN_PASSWORD is not set, so this app is refusing to open.")
         st.caption("Set it in .env locally, or in the app's secrets when deployed.")
         # Say whether secrets loaded at all: a TOML error there looks exactly
@@ -46,7 +50,7 @@ def require_password() -> bool:
     with st.form("login"):
         pw = st.text_input("Password (enter 4-digits)", type="password")
         if st.form_submit_button("Enter"):
-            if pw == config.ADMIN_PASSWORD:
+            if pw == expected:
                 st.session_state["authed"] = True
                 st.rerun()
             else:
