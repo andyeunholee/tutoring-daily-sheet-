@@ -5,13 +5,16 @@
 
 ## 앱 두 개
 
+둘 다 Streamlit Community Cloud에서 돌아갑니다. 원장님 PC를 꺼도 동작합니다.
+
 | 앱 | 누가 | 주소 |
 |---|---|---|
-| `app.py` | 선생님 | http://localhost:8501 |
-| `review_app.py` | 원장님 | http://localhost:8502 |
+| `app.py` | 선생님 | https://3rptsszzfugdsemkjhfugt.streamlit.app/ |
+| `review_app.py` | 원장님 | https://rcxpbjjystx82ttljuybcb.streamlit.app/ |
 
-**`start_apps.bat` 을 더블클릭하면 두 앱이 한 번에 뜹니다.** 최소화된 창 두 개가
-남는데, 그 창을 닫으면 앱이 꺼집니다. 직접 실행하려면:
+`main` 브랜치에 푸시하면 두 앱 모두 자동으로 재배포됩니다.
+
+로컬에서 확인할 때는:
 
 ```bash
 streamlit run app.py
@@ -138,25 +141,20 @@ token_uri = "https://oauth2.googleapis.com/token"
 
 ## 웹사이트에 바로가기 링크 걸기
 
-원장님 웹사이트에 이런 링크를 두면 검토 앱이 바로 열립니다.
-
 ```html
-<a href="http://localhost:8502/" target="_blank" rel="noopener">튜터링 리포트 검토</a>
+<a href="https://rcxpbjjystx82ttljuybcb.streamlit.app/" target="_blank" rel="noopener">튜터링 리포트 검토</a>
 ```
 
-**이 링크는 앱이 실행 중인 그 PC에서만 동작합니다.** `localhost` 는 "지금 이 컴퓨터"를
-뜻하므로, 다른 사람이 웹사이트에서 이 링크를 클릭하면 자기 컴퓨터의 8502 를 찾다가
-실패합니다. 원장님 전용 바로가기로 쓰는 건 문제없지만, 남과 공유하는 링크로는
-동작하지 않습니다.
+앱이 비공개로 설정돼 있으면, 링크를 누른 사람은 먼저 Streamlit 로그인 화면을 만납니다.
+원장님 계정으로 로그인한 기기에서는 어디서든 열리고, 다른 사람은 여기서 막힙니다.
+그 뒤에 `ADMIN_PASSWORD` 를 한 번 더 물어봅니다.
 
-링크를 누르기 전에 `start_apps.bat` 이 실행돼 있어야 합니다. PC를 켤 때마다 자동으로
-띄우려면 `start_apps.bat` 의 바로가기를 시작프로그램 폴더에 넣으면 됩니다
-(`Win+R` → `shell:startup`).
+무료 플랜은 한동안 접속이 없으면 앱이 잠듭니다. 그 뒤 첫 접속은 깨어나느라 30초쯤
+걸립니다.
 
 ## 파일 구조
 
 ```
-start_apps.bat         두 앱을 한 번에 실행
 app.py                 선생님 입력 폼
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
