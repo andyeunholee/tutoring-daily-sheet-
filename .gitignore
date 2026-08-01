@@ -1,4 +1,9 @@
 .env
 tutoring_records.csv
+pending_reports.json
+pending_reports.json.tmp
+pending_reports.json.lock
+credentials.json
+token_tutoring.json
 __pycache__/
 *.pyc
