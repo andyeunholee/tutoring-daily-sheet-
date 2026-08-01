@@ -252,8 +252,15 @@ if submitted:
 
     st.success("Data saved successfully!")
 
-    # 3. Queue it for the director's review app
-    store.add(entry, config.LOCAL_TZ)
+    # 3. Queue it for the director's review app.
+    # Never let this stop step 4: emailing the director is how the report
+    # actually reaches a human, and it worked long before the review queue
+    # existed. A teacher who has finished a lesson should not lose their write-up
+    # because a spreadsheet is misconfigured.
+    try:
+        store.add(entry, config.LOCAL_TZ)
+    except Exception as e:
+        st.warning(f"Saved and emailed, but not queued for review: {e}")
 
     # 4. Send Email to the director
     if config.RECEIVER_EMAIL:

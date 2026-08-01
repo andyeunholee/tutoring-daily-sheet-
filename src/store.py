@@ -19,6 +19,7 @@ from functools import lru_cache
 from zoneinfo import ZoneInfo
 
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 PENDING = "pending"
 SENT = "sent"
@@ -84,6 +85,23 @@ def _service():
     return build("sheets", "v4", credentials=default_credentials())
 
 
+def _explain(e: HttpError, what: str) -> StoreUnavailable:
+    """Turn a bare HttpError into something that says what to go fix.
+
+    Streamlit redacts exception text in deployed apps, so an unhandled
+    HttpError reaches the user as "error details are in the logs" and nothing
+    else. The status code is the whole diagnosis here, so say it out loud.
+    """
+    status = getattr(getattr(e, "resp", None), "status", None)
+    hint = {
+        403: ("The reports spreadsheet is not shared with the service account. "
+              "Share it with the client_email in the service account key, as Editor."),
+        404: ("No spreadsheet with that id is visible. Check "
+              "REPORTS_SPREADSHEET_ID in the app's secrets."),
+    }.get(status, "")
+    return StoreUnavailable(f"{what} failed (HTTP {status}). {hint}".strip())
+
+
 @lru_cache(maxsize=1)
 def _tab() -> tuple[str, int]:
     """(tab title, sheet id) for the reports tab.
@@ -92,8 +110,10 @@ def _tab() -> tuple[str, int]:
     whose tab was left named "Untitled" still works.
     """
     import config
-    meta = _service().spreadsheets().get(
-        spreadsheetId=config.REPORTS_SPREADSHEET_ID).execute()
+    try:
+        meta = _service().spreadsheets().get(spreadsheetId=_sheet_id()).execute()
+    except HttpError as e:
+        raise _explain(e, "Opening the reports spreadsheet") from e
     sheets = meta.get("sheets", [])
     if not sheets:
         raise StoreUnavailable("The reports spreadsheet has no tabs.")
@@ -160,12 +180,15 @@ def add(report: dict, tz: str = "America/New_York") -> str:
         "report": report,
     }
     title, _ = _tab()
-    _values().append(
-        spreadsheetId=_sheet_id(),
-        range=f"'{title}'!A:{_LAST_COL}",
-        valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
-        body={"values": [row_from_entry(entry)]}).execute()
+    try:
+        _values().append(
+            spreadsheetId=_sheet_id(),
+            range=f"'{title}'!A:{_LAST_COL}",
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [row_from_entry(entry)]}).execute()
+    except HttpError as e:
+        raise _explain(e, "Saving the report") from e
     return entry["id"]
 
 
