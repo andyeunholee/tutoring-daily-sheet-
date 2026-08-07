@@ -95,6 +95,9 @@ SMTP_HOST = setting("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(setting("SMTP_PORT", "587"))
 
 # --- Review app ---
+# Where the daily reminder tells the director to go.
+REVIEW_APP_URL = setting(
+    "REVIEW_APP_URL", "https://rcxpbjjystx82ttljuybcb.streamlit.app/")
 # Required once the app is reachable from the internet: it shows every parent's
 # address and can send mail as SENDER_EMAIL.
 ADMIN_PASSWORD = setting("ADMIN_PASSWORD")

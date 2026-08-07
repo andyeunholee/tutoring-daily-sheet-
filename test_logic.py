@@ -1,7 +1,10 @@
 """Quick checks for the report rendering, roster parsing and the report store."""
 
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
+import config
+import daily_reminder
 from src import report as report_lib
 from src import store
 from src.mailer import invalid_addresses, split_addresses
@@ -113,6 +116,37 @@ def test_roster_missing_header_explains_the_fix():
         assert "Parent Email" in str(e)
     else:
         raise AssertionError("missing Parent Email header should raise")
+
+
+def test_reminder_lists_what_is_waiting_and_for_how_long():
+    now = datetime(2026, 8, 7, 11, 0, tzinfo=ZoneInfo("America/New_York"))
+
+    def waiting(name, created):
+        return {"id": name, "created_at": created, "status": store.PENDING,
+                "report": {**SAMPLE, "student_name": name,
+                           "class_date": "2026-08-01", "teacher_name": "Gabe"}}
+
+    subject, text, html = daily_reminder.build_reminder([
+        waiting("Zena", "2026-08-01T17:07:55-04:00"),
+        waiting("Andrew", "2026-08-07T09:00:00-04:00"),
+    ], now)
+
+    assert "2 reports" in subject
+    assert "Zena" in text and "Andrew" in text
+    assert "waiting 5 day(s)" in text          # submitted Aug 1, now Aug 7
+    assert "submitted today" in text
+    assert config.REVIEW_APP_URL in text
+    assert "<td" in html and "Zena" in html
+
+
+def test_reminder_survives_names_that_look_like_markup():
+    now = datetime(2026, 8, 7, 11, 0, tzinfo=ZoneInfo("America/New_York"))
+    entry = {"id": "x", "created_at": "not a timestamp", "status": store.PENDING,
+             "report": {**SAMPLE, "student_name": "<script>", "teacher_name": "A & B"}}
+    _, text, html = daily_reminder.build_reminder([entry], now)
+    assert "<script>" not in html and "&lt;script&gt;" in html
+    assert "A &amp; B" in html
+    assert "submitted today" in text           # unreadable timestamp must not crash
 
 
 def test_address_parsing():

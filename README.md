@@ -139,6 +139,44 @@ token_uri = "https://oauth2.googleapis.com/token"
 공개되는 순간 학부모 주소 전체가 노출되고 원장님 계정으로 메일이 나갈 수 있어서,
 비워둔 채로는 뜨지 않도록 막아두었습니다.
 
+## 매일 11시 미대응 리포트 리마인더
+
+검토 대기 중인 리포트가 있으면 **매일 오전 11시(뉴욕 기준)** 에 원장님 이메일로
+목록을 보냅니다. 대기가 하나도 없으면 **메일을 보내지 않습니다** — 매일 오는 메일은
+읽지 않게 되기 때문입니다.
+
+GitHub Actions에서 돌아갑니다 (`.github/workflows/daily-reminder.yml`). Streamlit
+Cloud는 사람이 접속할 때만 코드가 도는 구조라 예약 실행에 쓸 수 없습니다.
+
+### 필요한 GitHub Secrets
+
+저장소 → **Settings → Secrets and variables → Actions → New repository secret**
+
+| 이름 | 값 |
+|---|---|
+| `SENDER_EMAIL` | 보내는 Gmail 주소 |
+| `SENDER_PASSWORD` | Gmail 앱 비밀번호 |
+| `RECEIVER_EMAIL` | 리마인더를 받을 주소 |
+| `REPORTS_SPREADSHEET_ID` | 리포트 시트 ID |
+| `STUDENTS_SPREADSHEET_ID` | 명부 시트 ID |
+| `GCP_SERVICE_ACCOUNT_JSON` | `service_account.json` **파일 내용 전체** |
+
+### 손으로 돌려보기
+
+Actions 탭 → **Daily review reminder** → **Run workflow**. 수동 실행은 시각과
+무관하게 즉시 동작합니다.
+
+로컬에서는:
+
+```bash
+python daily_reminder.py --force --dry-run   # 보내지 않고 내용만 출력
+```
+
+시각을 바꾸려면 [daily_reminder.py](daily_reminder.py)의 `REMINDER_HOUR` 와
+워크플로의 `cron` 두 줄을 함께 고쳐야 합니다. GitHub의 cron은 UTC라서, 서머타임
+때문에 11시에 해당하는 UTC 시각이 계절마다 달라집니다. 그래서 두 시각 모두 실행하고
+스크립트가 현지 시각을 보고 아닌 쪽을 건너뜁니다.
+
 ## 웹사이트에 바로가기 링크 걸기
 
 ```html
@@ -156,6 +194,7 @@ token_uri = "https://oauth2.googleapis.com/token"
 
 ```
 app.py                 선생님 입력 폼
+daily_reminder.py      매일 11시 미대응 리포트 알림 (GitHub Actions)
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
 src/report.py          리포트 필드 정의와 이메일 HTML·텍스트 생성 (두 앱 공용)
