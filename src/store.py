@@ -140,9 +140,12 @@ def _sheet_id() -> str:
 def _rows() -> list[list]:
     """Every data row, header excluded, paired with nothing else."""
     title, _ = _tab()
-    resp = _values().get(
-        spreadsheetId=_sheet_id(),
-        range=f"'{title}'!A2:{_LAST_COL}").execute()
+    try:
+        resp = _values().get(
+            spreadsheetId=_sheet_id(),
+            range=f"'{title}'!A2:{_LAST_COL}").execute()
+    except HttpError as e:
+        raise _explain(e, "Reading the reports sheet") from e
     return resp.get("values", [])
 
 
@@ -153,11 +156,11 @@ def load_all() -> list[dict]:
     try:
         entries = [e for e in (entry_from_row(r) for r in _rows()) if e]
     except StoreUnavailable:
-        raise
+        raise               # already carries a diagnosis; do not bury it
     except Exception as e:
+        # Cause unknown here — say so rather than guessing at permissions.
         raise StoreUnavailable(
-            f"Could not read the reports sheet: {e}. Check that it is shared "
-            "with the service account as an Editor.") from e
+            f"Reading the reports sheet failed: {type(e).__name__}: {e}") from e
     return sorted(entries, key=lambda e: e.get("created_at", ""), reverse=True)
 
 

@@ -101,7 +101,7 @@ def main(argv: list[str]) -> int:
     try:
         pending = [e for e in store.load_all() if e.get("status") != store.SENT]
     except Exception as e:
-        print(f"Could not read the reports sheet: {e}", file=sys.stderr)
+        print(e, file=sys.stderr)
         return 1
 
     if not pending:

@@ -17,7 +17,10 @@ import os
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+
+# google_auth_oauthlib is imported where the browser flow actually runs. It
+# exists to open a consent screen, which a server has no use for, and importing
+# it up here would make it a hard dependency of the scheduled job too.
 
 DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SERVICE_ACCOUNT_SECRET = "gcp_service_account"
@@ -111,6 +114,8 @@ def get_credentials(
                 creds = None
 
         if not creds:
+            from google_auth_oauthlib.flow import InstalledAppFlow
+
             flow = InstalledAppFlow.from_client_secrets_file(credentials_path, scopes)
             creds = flow.run_local_server(
                 port=0,
