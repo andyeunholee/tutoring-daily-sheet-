@@ -50,8 +50,9 @@ def build_reminder(pending: list[dict], now: datetime) -> tuple[str, str, str]:
             "days": _waited_days(e.get("created_at", ""), now),
         })
 
-    lines = [f"{n} tutoring report{'s' if n != 1 else ''} still need to be "
-             "reviewed and sent to parents.", ""]
+    plural, verb = ("s", "need") if n != 1 else ("", "needs")
+    lines = [f"{n} tutoring report{plural} still {verb} to be reviewed and "
+             "sent to parents.", ""]
     for r in rows:
         waited = "submitted today" if r["days"] == 0 else f"waiting {r['days']} day(s)"
         lines.append(f"  - {r['student']} — {r['date']} — {r['teacher']} ({waited})")
@@ -70,8 +71,8 @@ def build_reminder(pending: list[dict], now: datetime) -> tuple[str, str, str]:
     html = (
         "<div style=\"font-family:-apple-system,Segoe UI,Arial,sans-serif;"
         "font-size:14px;color:#222\">"
-        f"<p><b>{n}</b> tutoring report{'s' if n != 1 else ''} still need to be "
-        "reviewed and sent to parents.</p>"
+        f"<p><b>{n}</b> tutoring report{plural} still {verb} to be reviewed "
+        "and sent to parents.</p>"
         "<table style='border-collapse:collapse'>"
         "<tr style='text-align:left;color:#666;font-size:12px'>"
         "<th style='padding-right:12px'>Student</th>"
