@@ -21,10 +21,14 @@ streamlit run app.py
 streamlit run review_app.py --server.port 8502
 ```
 
-선생님이 Submit을 누르면 리포트가 `pending_reports.json`에 "검토 대기"로 쌓이고,
-동시에 원장님 이메일(`RECEIVER_EMAIL`)로 발송됩니다. 원장님은 검토 앱에서 그
-리포트를 열어 항목별로 수정한 뒤 학부모에게 보냅니다. 보내고 나면 "발송 완료"로
-표시되어 중복 발송을 막습니다.
+선생님이 Submit을 누르면 세 가지가 한 번에 일어납니다.
+
+1. 리포트가 Reports 시트에 저장됩니다
+2. 원장님 이메일(`RECEIVER_EMAIL`)로 알림이 갑니다
+3. **학부모용 메일이 Gmail 임시보관함에 초안으로 만들어집니다** — 발송은 되지 않습니다
+
+원장님은 Gmail에서 초안을 읽고 다듬어 직접 보내시면 됩니다. 검토 앱에서 수정한 뒤
+보내는 방법도 그대로 쓸 수 있습니다.
 
 ## 최초 설정 (1회)
 
@@ -139,13 +143,14 @@ token_uri = "https://oauth2.googleapis.com/token"
 공개되는 순간 학부모 주소 전체가 노출되고 원장님 계정으로 메일이 나갈 수 있어서,
 비워둔 채로는 뜨지 않도록 막아두었습니다.
 
-## 학부모 메일 초안 만들기 (수동 실행)
+## 학부모 메일 초안
 
-검토 대기 중인 리포트마다 Gmail 임시보관함에 초안을 하나씩 만들어 둡니다.
-**아무것도 발송하지 않습니다.** 원장님은 Gmail에서 내용을 다듬고 직접 보내시면
-됩니다. 대기가 없으면 아무 일도 하지 않습니다.
+초안은 **선생님이 제출하는 순간** 만들어집니다 ([app.py](app.py)). 수업이 끝나고
+리포트가 올라오면 바로 Gmail 임시보관함에 들어가 있습니다. **아무것도 발송되지
+않습니다.**
 
-**예약 실행은 없습니다.** 필요할 때 Actions 탭에서 직접 돌리는 방식입니다.
+`daily_drafts.py` 는 그 자리에서 초안 만들기가 실패한 건을 나중에 따라잡기 위한
+수동 보완 수단입니다. 예약 실행은 없습니다.
 
 초안의 To/Cc는 명부에서 채웁니다. 이름이 명부와 매칭되지 않으면 **주소를 비운 채로**
 초안을 만듭니다 — 엉뚱한 학부모에게 보내는 것보다 낫고, Gmail에서 주소만 넣으면
@@ -174,7 +179,9 @@ GitHub Actions에서 돌아갑니다 (`.github/workflows/prepare-drafts.yml`).
 | `STUDENTS_SPREADSHEET_ID` | 명부 시트 ID |
 | `GCP_SERVICE_ACCOUNT_JSON` | `service_account.json` **파일 내용 전체** |
 
-### 돌리는 법
+### 따라잡기 실행
+
+초안이 만들어지지 않은 채 남은 리포트가 있을 때만 필요합니다.
 
 Actions 탭 → **Prepare parent drafts** → **Run workflow**.
 
@@ -202,7 +209,7 @@ python daily_drafts.py             # 실제로 초안 생성
 
 ```
 app.py                 선생님 입력 폼
-daily_drafts.py        Gmail 초안 생성 (Actions에서 수동 실행)
+daily_drafts.py        놓친 초안 따라잡기 (Actions에서 수동 실행)
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
 src/report.py          리포트 필드 정의와 이메일 HTML·텍스트 생성 (두 앱 공용)

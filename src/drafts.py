@@ -41,6 +41,18 @@ def build_draft(subject: str, text_body: str, html_body: str, to: str, cc: str,
     return msg
 
 
+def build_report_draft(report: dict, to: str, cc: str,
+                       sender: str) -> MIMEMultipart:
+    """The parent email for one report, rendered exactly as sending would."""
+    from src import report as report_lib
+
+    return build_draft(
+        report_lib.email_subject(report),
+        report_lib.render_text(report),
+        report_lib.render_html(report),
+        to, cc, sender)
+
+
 def save_drafts(messages: list[MIMEMultipart], *, sender: str, password: str,
                 host: str = GMAIL_IMAP_HOST,
                 folder: str = GMAIL_DRAFTS) -> list[tuple[bool, str]]:

@@ -5,12 +5,29 @@ import os
 import pytz
 
 import config
+from src import drafts
 from src import report as report_lib
 from src import store
 from src.mailer import send_email
+from src.students import find_student
 
 # Page Config
 st.set_page_config(page_title="Tutoring Daily Sheet", page_icon="📝")
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def roster() -> list:
+    """The student list, for addressing the parent draft. Never raises: a draft
+    with no address still beats no draft at all."""
+    if not config.STUDENTS_SPREADSHEET_ID:
+        return []
+    try:
+        from src.auth import default_credentials
+        from src.students import load_students
+        return load_students(default_credentials(),
+                             config.STUDENTS_SPREADSHEET_ID, config.STUDENTS_RANGE)
+    except Exception:
+        return []
 
 # Styles
 st.markdown("""
@@ -257,8 +274,9 @@ if submitted:
     # actually reaches a human, and it worked long before the review queue
     # existed. A teacher who has finished a lesson should not lose their write-up
     # because a spreadsheet is misconfigured.
+    entry_id = None
     try:
-        store.add(entry, config.LOCAL_TZ)
+        entry_id = store.add(entry, config.LOCAL_TZ)
     except Exception as e:
         st.warning(f"Saved and emailed, but not queued for review: {e}")
 
@@ -280,4 +298,27 @@ if submitted:
         st.warning("Receiver email not configured.")
         with st.expander("View Generated Report"):
             st.components.v1.html(html_body, height=600, scrolling=True)
+
+    # 5. Leave the parent email as a draft while the lesson is still fresh, so
+    # the director only has to read it and press send. Nothing goes out here.
+    # A failure leaves the report pending, which the Prepare parent drafts
+    # workflow can pick up later; it must never cost the teacher their write-up.
+    if entry_id:
+        try:
+            match = find_student(roster(), entry.get("student_name", ""))
+            to = match.parent_email if match else ""
+            cc = match.student_email if match else ""
+            ok, why = drafts.save_drafts(
+                [drafts.build_report_draft(entry, to, cc, config.SENDER_EMAIL)],
+                sender=config.SENDER_EMAIL, password=config.SENDER_PASSWORD)[0]
+            if ok:
+                store.mark_drafted(entry_id, to, cc)
+                st.success(
+                    f"Parent draft ready in Gmail, addressed to {to}." if to
+                    else "Parent draft ready in Gmail. No roster match for this "
+                         "name, so the address was left blank.")
+            else:
+                st.warning(f"Parent draft not prepared: {why}")
+        except Exception as e:
+            st.warning(f"Parent draft not prepared: {e}")
 

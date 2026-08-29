@@ -14,7 +14,6 @@ import sys
 
 import config
 from src import drafts
-from src import report as report_lib
 from src import store
 
 
@@ -66,13 +65,9 @@ def main(argv: list[str]) -> int:
 
     prepared = []
     for entry in waiting:
-        report = entry.get("report", {})
         to, cc = recipients_for(entry, roster)
-        msg = drafts.build_draft(
-            report_lib.email_subject(report),
-            report_lib.render_text(report),
-            report_lib.render_html(report),
-            to, cc, config.SENDER_EMAIL)
+        msg = drafts.build_report_draft(
+            entry.get("report", {}), to, cc, config.SENDER_EMAIL)
         prepared.append((entry, to, cc, msg))
 
     if dry_run:
