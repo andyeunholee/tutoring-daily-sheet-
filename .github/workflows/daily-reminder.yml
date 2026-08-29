@@ -1,10 +1,10 @@
-name: Daily review reminder
+name: Daily parent drafts
 
 on:
   schedule:
     # GitHub runs cron in UTC, and 11:00 in America/New_York is 15:00 UTC on
     # daylight time but 16:00 UTC on standard time. Fire on both and let
-    # daily_reminder.py check the local clock and skip the wrong one.
+    # daily_drafts.py check the local clock and skip the wrong one.
     - cron: "0 15 * * *"
     - cron: "0 16 * * *"
   workflow_dispatch:        # run it by hand from the Actions tab
@@ -27,7 +27,7 @@ jobs:
           GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
         run: printf '%s' "$GCP_SERVICE_ACCOUNT_JSON" > service_account.json
 
-      - name: Send the reminder
+      - name: Prepare the drafts
         env:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
@@ -35,7 +35,7 @@ jobs:
           REPORTS_SPREADSHEET_ID: ${{ secrets.REPORTS_SPREADSHEET_ID }}
           STUDENTS_SPREADSHEET_ID: ${{ secrets.STUDENTS_SPREADSHEET_ID }}
         # A manual run means "I want to see it now", so skip the clock check.
-        run: python daily_reminder.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+        run: python daily_drafts.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
 
       - name: Remove the key
         if: always()

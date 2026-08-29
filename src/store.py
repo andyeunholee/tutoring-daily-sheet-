@@ -22,6 +22,10 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 PENDING = "pending"
+# A draft of the parent email is waiting in the sender's Gmail drafts
+# folder. The director edits and sends it from there, so nothing here can
+# observe the actual send; "drafted" is as far as this store ever gets.
+DRAFTED = "drafted"
 SENT = "sent"
 
 COLUMNS = ["id", "created_at", "status", "sent_at", "sent_to", "sent_cc",
@@ -227,6 +231,17 @@ def mark_sent(entry_id: str, to: str, cc: str,
               tz: str = "America/New_York") -> bool:
     def change(e):
         e.update(status=SENT, sent_at=_now_iso(tz), sent_to=to, sent_cc=cc)
+    return _mutate(entry_id, change)
+
+
+def mark_drafted(entry_id: str, to: str, cc: str) -> bool:
+    """Record that a draft was prepared, so tomorrow does not prepare it again.
+
+    The recipient columns hold who the draft is addressed to; sent_at stays
+    empty because nothing has been sent.
+    """
+    def change(e):
+        e.update(status=DRAFTED, sent_at=None, sent_to=to, sent_cc=cc)
     return _mutate(entry_id, change)
 
 

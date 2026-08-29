@@ -76,8 +76,8 @@ STUDENTS_SPREADSHEET_ID=<위에서 복사한 시트 ID>
 
 ## 검토 앱 사용법
 
-1. 왼쪽 사이드바에서 **Pending / Sent / All** 선택
-2. 상단에서 리포트 선택 (🟡 = 검토 대기, ✅ = 발송 완료)
+1. 왼쪽 사이드바에서 **Pending / Drafted / Sent / All** 선택
+2. 상단에서 리포트 선택 (🟡 = 검토 대기, 📝 = Gmail 초안 생성됨, ✅ = 이 앱에서 발송 완료)
 3. 왼쪽에서 항목별로 수정 → 오른쪽 **Preview**가 즉시 갱신됨
 4. **To**(학부모)와 **Cc**(학생)는 Google Sheet에서 자동으로 채워짐 — 필요하면 수정
 5. **📨 Send to parent** 클릭
@@ -139,11 +139,23 @@ token_uri = "https://oauth2.googleapis.com/token"
 공개되는 순간 학부모 주소 전체가 노출되고 원장님 계정으로 메일이 나갈 수 있어서,
 비워둔 채로는 뜨지 않도록 막아두었습니다.
 
-## 매일 11시 미대응 리포트 리마인더
+## 매일 11시 학부모 메일 초안 만들기
 
-검토 대기 중인 리포트가 있으면 **매일 오전 11시(뉴욕 기준)** 에 원장님 이메일로
-목록을 보냅니다. 대기가 하나도 없으면 **메일을 보내지 않습니다** — 매일 오는 메일은
-읽지 않게 되기 때문입니다.
+검토 대기 중인 리포트마다 **매일 오전 11시(뉴욕 기준)** 에 Gmail 임시보관함에
+초안을 하나씩 만들어 둡니다. **아무것도 발송하지 않습니다.** 원장님은 Gmail에서
+내용을 다듬고 직접 보내시면 됩니다. 대기가 없으면 아무 일도 하지 않습니다.
+
+초안의 To/Cc는 명부에서 채웁니다. 이름이 명부와 매칭되지 않으면 **주소를 비운 채로**
+초안을 만듭니다 — 엉뚱한 학부모에게 보내는 것보다 낫고, Gmail에서 주소만 넣으면
+됩니다.
+
+SMTP에는 초안이라는 개념이 없어서 [src/drafts.py](src/drafts.py)는 IMAP으로
+임시보관함에 직접 넣습니다. 발송에 쓰는 앱 비밀번호를 그대로 쓰므로 추가 인증은
+필요 없습니다.
+
+초안이 만들어진 리포트는 상태가 `drafted` 가 되어 다음 날 다시 만들어지지 않고,
+검토 앱의 **Drafted** 목록에서 볼 수 있습니다. Gmail에서 보내신 것을 이 시스템은
+알 수 없으므로, 상태는 `drafted` 에서 멈춥니다.
 
 GitHub Actions에서 돌아갑니다 (`.github/workflows/daily-reminder.yml`). Streamlit
 Cloud는 사람이 접속할 때만 코드가 도는 구조라 예약 실행에 쓸 수 없습니다.
@@ -154,28 +166,28 @@ Cloud는 사람이 접속할 때만 코드가 도는 구조라 예약 실행에 
 
 | 이름 | 값 |
 |---|---|
-| `SENDER_EMAIL` | 보내는 Gmail 주소 |
+| `SENDER_EMAIL` | 보내는 Gmail 주소 (초안도 이 계정에 생깁니다) |
 | `SENDER_PASSWORD` | Gmail 앱 비밀번호 |
-| `RECEIVER_EMAIL` | 리마인더를 받을 주소 |
+| `RECEIVER_EMAIL` | 선생님 제출 알림을 받을 주소 |
 | `REPORTS_SPREADSHEET_ID` | 리포트 시트 ID |
 | `STUDENTS_SPREADSHEET_ID` | 명부 시트 ID |
 | `GCP_SERVICE_ACCOUNT_JSON` | `service_account.json` **파일 내용 전체** |
 
 ### 손으로 돌려보기
 
-Actions 탭 → **Daily review reminder** → **Run workflow**. 수동 실행은 시각과
+Actions 탭 → **Daily parent drafts** → **Run workflow**. 수동 실행은 시각과
 무관하게 즉시 동작합니다.
 
 로컬에서는:
 
 ```bash
-python daily_reminder.py --force --dry-run   # 보내지 않고 내용만 출력
+python daily_drafts.py --force --dry-run   # 무엇을 만들지 보기만 함
 ```
 
-시각을 바꾸려면 [daily_reminder.py](daily_reminder.py)의 `REMINDER_HOUR` 와
-워크플로의 `cron` 두 줄을 함께 고쳐야 합니다. GitHub의 cron은 UTC라서, 서머타임
-때문에 11시에 해당하는 UTC 시각이 계절마다 달라집니다. 그래서 두 시각 모두 실행하고
-스크립트가 현지 시각을 보고 아닌 쪽을 건너뜁니다.
+시각을 바꾸려면 [daily_drafts.py](daily_drafts.py)의 `DRAFT_HOUR` 와 워크플로의
+`cron` 두 줄을 함께 고쳐야 합니다. GitHub의 cron은 UTC라서 서머타임에 따라 11시에
+해당하는 UTC 시각이 달라집니다. 그래서 두 시각 모두 실행하고 스크립트가 현지 시각을
+보고 아닌 쪽을 건너뜁니다.
 
 ## 웹사이트에 바로가기 링크 걸기
 
@@ -194,12 +206,13 @@ python daily_reminder.py --force --dry-run   # 보내지 않고 내용만 출력
 
 ```
 app.py                 선생님 입력 폼
-daily_reminder.py      매일 11시 미대응 리포트 알림 (GitHub Actions)
+daily_drafts.py        매일 11시 Gmail 초안 생성 (GitHub Actions)
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
 src/report.py          리포트 필드 정의와 이메일 HTML·텍스트 생성 (두 앱 공용)
 src/store.py           제출 리포트 저장 + 발송 상태 (Reports Google Sheet)
 src/mailer.py          SMTP 발송 (To/Cc)
+src/drafts.py          IMAP으로 Gmail 임시보관함에 초안 저장
 src/students.py        Google Sheet 학생 명부 읽기
 src/auth.py            구글 OAuth
 test_logic.py          검증용 테스트 (python test_logic.py)

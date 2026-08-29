@@ -100,7 +100,7 @@ except Exception as e:
     st.caption("The submitted reports are safe in the sheet; only this app is "
                "failing to read them.")
     st.stop()
-open_ids = {e["id"] for e in all_entries if e.get("status") != store.SENT}
+open_ids = {e["id"] for e in all_entries if e.get("status") == store.PENDING}
 
 
 @st.fragment(run_every=15)
@@ -116,7 +116,7 @@ def watch_for_new_reports(known: set) -> None:
     except Exception:
         return          # a blip while polling must not take the page down
     arrived = {e["id"] for e in current
-               if e.get("status") != store.SENT} - known
+               if e.get("status") == store.PENDING} - known
     if not arrived:
         return
     st.info(f"🔔 {len(arrived)} new report(s) submitted.")
@@ -126,7 +126,8 @@ def watch_for_new_reports(known: set) -> None:
 
 with st.sidebar:
     st.header("📬 Review")
-    view = st.radio("Show", ["Pending", "Sent", "All"], horizontal=True)
+    view = st.radio("Show", ["Pending", "Drafted", "Sent", "All"],
+                    horizontal=True)
     watch_for_new_reports(open_ids)
     if st.button("🔄 Reload roster"):
         load_roster.clear()
@@ -137,7 +138,9 @@ with st.sidebar:
 
 entries = all_entries
 if view == "Pending":
-    entries = [e for e in entries if e.get("status") != store.SENT]
+    entries = [e for e in entries if e.get("status") == store.PENDING]
+elif view == "Drafted":
+    entries = [e for e in entries if e.get("status") == store.DRAFTED]
 elif view == "Sent":
     entries = [e for e in entries if e.get("status") == store.SENT]
 
@@ -151,7 +154,7 @@ if not entries:
 
 def label_for(e: dict) -> str:
     r = e.get("report", {})
-    icon = "✅" if e.get("status") == store.SENT else "🟡"
+    icon = {store.SENT: "✅", store.DRAFTED: "📝"}.get(e.get("status"), "🟡")
     d = report_lib.to_date(r.get("class_date"))
     return (f"{icon}  {r.get('student_name') or '(no name)'} — "
             f"{d.strftime('%m/%d/%Y') if d else '?'} — {r.get('teacher_name', '')}")
@@ -164,7 +167,10 @@ choice = by_id[entry_id]
 saved = choice.get("report", {})
 k = f"{entry_id}_"          # widget keys are per-report, so switching is clean
 
-if choice.get("status") == store.SENT:
+if choice.get("status") == store.DRAFTED:
+    st.info("📝 A draft of this report is waiting in the Gmail drafts folder. "
+            "Sending from here would be a second copy.")
+elif choice.get("status") == store.SENT:
     st.success(f"Already sent {choice.get('sent_at', '')} → To: "
                f"{choice.get('sent_to', '')} / Cc: {choice.get('sent_cc', '') or '-'}")
 

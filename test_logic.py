@@ -3,8 +3,8 @@
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-import config
-import daily_reminder
+import daily_drafts
+from src import drafts as drafts_lib
 from src import report as report_lib
 from src import store
 from src.mailer import invalid_addresses, split_addresses
@@ -118,35 +118,38 @@ def test_roster_missing_header_explains_the_fix():
         raise AssertionError("missing Parent Email header should raise")
 
 
-def test_reminder_lists_what_is_waiting_and_for_how_long():
-    now = datetime(2026, 8, 7, 11, 0, tzinfo=ZoneInfo("America/New_York"))
-
-    def waiting(name, created):
-        return {"id": name, "created_at": created, "status": store.PENDING,
-                "report": {**SAMPLE, "student_name": name,
-                           "class_date": "2026-08-01", "teacher_name": "Gabe"}}
-
-    subject, text, html = daily_reminder.build_reminder([
-        waiting("Zena", "2026-08-01T17:07:55-04:00"),
-        waiting("Andrew", "2026-08-07T09:00:00-04:00"),
-    ], now)
-
-    assert "2 reports" in subject
-    assert "Zena" in text and "Andrew" in text
-    assert "waiting 5 day(s)" in text          # submitted Aug 1, now Aug 7
-    assert "submitted today" in text
-    assert config.REVIEW_APP_URL in text
-    assert "<td" in html and "Zena" in html
+def test_draft_carries_the_addresses_and_both_bodies():
+    msg = drafts_lib.build_draft(
+        "[Tutoring Report] Eunho - 02/01/2026", "plain text", "<p>html</p>",
+        "mom@x.com, dad@x.com", "student@x.com", "me@school.com")
+    assert msg["To"] == "mom@x.com, dad@x.com"
+    assert msg["Cc"] == "student@x.com"
+    assert msg["From"] == "me@school.com"
+    types = [part.get_content_type() for part in msg.get_payload()]
+    assert types == ["text/plain", "text/html"]     # HTML last so Gmail prefers it
 
 
-def test_reminder_survives_names_that_look_like_markup():
-    now = datetime(2026, 8, 7, 11, 0, tzinfo=ZoneInfo("America/New_York"))
-    entry = {"id": "x", "created_at": "not a timestamp", "status": store.PENDING,
-             "report": {**SAMPLE, "student_name": "<script>", "teacher_name": "A & B"}}
-    _, text, html = daily_reminder.build_reminder([entry], now)
-    assert "<script>" not in html and "&lt;script&gt;" in html
-    assert "A &amp; B" in html
-    assert "submitted today" in text           # unreadable timestamp must not crash
+def test_draft_with_no_known_address_still_gets_built():
+    """A report whose student is not in the roster is still worth drafting."""
+    msg = drafts_lib.build_draft("Subject", "text", "<p>h</p>", "", "",
+                                 "me@school.com")
+    assert msg["To"] is None and msg["Cc"] is None
+    assert msg["Subject"] == "Subject"
+
+
+def test_recipients_prefer_addresses_already_recorded():
+    roster = parse_students(ROSTER_ROWS)
+    from_roster = {"report": {"student_name": "Eunho Lee"}}
+    assert daily_drafts.recipients_for(from_roster, roster) == (
+        "mom@x.com", "eunho@x.com")
+
+    # The director corrected the address once; do not overwrite it from the roster.
+    corrected = {"sent_to": "grandma@x.com", "sent_cc": "",
+                 "report": {"student_name": "Eunho Lee"}}
+    assert daily_drafts.recipients_for(corrected, roster) == ("grandma@x.com", "")
+
+    unknown = {"report": {"student_name": "Nobody At All"}}
+    assert daily_drafts.recipients_for(unknown, roster) == ("", "")
 
 
 def test_address_parsing():
