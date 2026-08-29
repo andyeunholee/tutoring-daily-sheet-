@@ -1,26 +1,21 @@
 """Prepare a Gmail draft for every tutoring report still waiting for parents.
 
-Runs from GitHub Actions each morning. It sends nothing. The messages are left
-in the sender's drafts folder, addressed and filled in, for the director to
-read over and send from Gmail.
+Run on demand, from the Actions tab or a shell. It sends nothing. The messages
+are left in the sender's drafts folder, addressed and filled in, for the
+director to read over and send from Gmail.
 
-    python daily_drafts.py             # only acts at DRAFT_HOUR local time
-    python daily_drafts.py --force     # act now, whatever the clock says
+    python daily_drafts.py             # prepare the drafts
     python daily_drafts.py --dry-run   # list what it would prepare, touch nothing
 """
 
 from __future__ import annotations
 
 import sys
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import config
 from src import drafts
 from src import report as report_lib
 from src import store
-
-DRAFT_HOUR = 11         # local hour; the workflow explains why it is checked here
 
 
 def _roster() -> list:
@@ -53,17 +48,7 @@ def recipients_for(entry: dict, roster: list) -> tuple[str, str]:
 
 
 def main(argv: list[str]) -> int:
-    force = "--force" in argv
     dry_run = "--dry-run" in argv
-    now = datetime.now(ZoneInfo(config.LOCAL_TZ))
-
-    # The scheduler fires in UTC and the offset here moves with daylight saving,
-    # so the workflow fires on both candidate hours and this decides which one
-    # is really DRAFT_HOUR today.
-    if not force and now.hour != DRAFT_HOUR:
-        print(f"Local time is {now:%H:%M} ({config.LOCAL_TZ}); "
-              f"drafts are prepared at {DRAFT_HOUR}:00. Nothing to do.")
-        return 0
 
     try:
         waiting = [e for e in store.load_all() if e.get("status") == store.PENDING]

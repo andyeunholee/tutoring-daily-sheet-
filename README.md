@@ -139,11 +139,13 @@ token_uri = "https://oauth2.googleapis.com/token"
 공개되는 순간 학부모 주소 전체가 노출되고 원장님 계정으로 메일이 나갈 수 있어서,
 비워둔 채로는 뜨지 않도록 막아두었습니다.
 
-## 매일 11시 학부모 메일 초안 만들기
+## 학부모 메일 초안 만들기 (수동 실행)
 
-검토 대기 중인 리포트마다 **매일 오전 11시(뉴욕 기준)** 에 Gmail 임시보관함에
-초안을 하나씩 만들어 둡니다. **아무것도 발송하지 않습니다.** 원장님은 Gmail에서
-내용을 다듬고 직접 보내시면 됩니다. 대기가 없으면 아무 일도 하지 않습니다.
+검토 대기 중인 리포트마다 Gmail 임시보관함에 초안을 하나씩 만들어 둡니다.
+**아무것도 발송하지 않습니다.** 원장님은 Gmail에서 내용을 다듬고 직접 보내시면
+됩니다. 대기가 없으면 아무 일도 하지 않습니다.
+
+**예약 실행은 없습니다.** 필요할 때 Actions 탭에서 직접 돌리는 방식입니다.
 
 초안의 To/Cc는 명부에서 채웁니다. 이름이 명부와 매칭되지 않으면 **주소를 비운 채로**
 초안을 만듭니다 — 엉뚱한 학부모에게 보내는 것보다 낫고, Gmail에서 주소만 넣으면
@@ -157,8 +159,7 @@ SMTP에는 초안이라는 개념이 없어서 [src/drafts.py](src/drafts.py)는
 검토 앱의 **Drafted** 목록에서 볼 수 있습니다. Gmail에서 보내신 것을 이 시스템은
 알 수 없으므로, 상태는 `drafted` 에서 멈춥니다.
 
-GitHub Actions에서 돌아갑니다 (`.github/workflows/daily-reminder.yml`). Streamlit
-Cloud는 사람이 접속할 때만 코드가 도는 구조라 예약 실행에 쓸 수 없습니다.
+GitHub Actions에서 돌아갑니다 (`.github/workflows/prepare-drafts.yml`).
 
 ### 필요한 GitHub Secrets
 
@@ -173,21 +174,16 @@ Cloud는 사람이 접속할 때만 코드가 도는 구조라 예약 실행에 
 | `STUDENTS_SPREADSHEET_ID` | 명부 시트 ID |
 | `GCP_SERVICE_ACCOUNT_JSON` | `service_account.json` **파일 내용 전체** |
 
-### 손으로 돌려보기
+### 돌리는 법
 
-Actions 탭 → **Daily parent drafts** → **Run workflow**. 수동 실행은 시각과
-무관하게 즉시 동작합니다.
+Actions 탭 → **Prepare parent drafts** → **Run workflow**.
 
 로컬에서는:
 
 ```bash
-python daily_drafts.py --force --dry-run   # 무엇을 만들지 보기만 함
+python daily_drafts.py --dry-run   # 무엇을 만들지 보기만 함
+python daily_drafts.py             # 실제로 초안 생성
 ```
-
-시각을 바꾸려면 [daily_drafts.py](daily_drafts.py)의 `DRAFT_HOUR` 와 워크플로의
-`cron` 두 줄을 함께 고쳐야 합니다. GitHub의 cron은 UTC라서 서머타임에 따라 11시에
-해당하는 UTC 시각이 달라집니다. 그래서 두 시각 모두 실행하고 스크립트가 현지 시각을
-보고 아닌 쪽을 건너뜁니다.
 
 ## 웹사이트에 바로가기 링크 걸기
 
@@ -206,7 +202,7 @@ python daily_drafts.py --force --dry-run   # 무엇을 만들지 보기만 함
 
 ```
 app.py                 선생님 입력 폼
-daily_drafts.py        매일 11시 Gmail 초안 생성 (GitHub Actions)
+daily_drafts.py        Gmail 초안 생성 (Actions에서 수동 실행)
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
 src/report.py          리포트 필드 정의와 이메일 HTML·텍스트 생성 (두 앱 공용)

@@ -1,16 +1,12 @@
-name: Daily parent drafts
+name: Prepare parent drafts
 
+# Run by hand from the Actions tab. There is no schedule: the director decides
+# when drafts are worth preparing.
 on:
-  schedule:
-    # GitHub runs cron in UTC, and 11:00 in America/New_York is 15:00 UTC on
-    # daylight time but 16:00 UTC on standard time. Fire on both and let
-    # daily_drafts.py check the local clock and skip the wrong one.
-    - cron: "0 15 * * *"
-    - cron: "0 16 * * *"
-  workflow_dispatch:        # run it by hand from the Actions tab
+  workflow_dispatch:
 
 jobs:
-  remind:
+  drafts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +15,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Only what the reminder needs; the Streamlit apps are not involved here.
+      # Only what this job needs; the Streamlit apps are not involved here.
       - run: pip install google-api-python-client google-auth python-dotenv
 
       - name: Write the service account key
@@ -34,8 +30,7 @@ jobs:
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
           REPORTS_SPREADSHEET_ID: ${{ secrets.REPORTS_SPREADSHEET_ID }}
           STUDENTS_SPREADSHEET_ID: ${{ secrets.STUDENTS_SPREADSHEET_ID }}
-        # A manual run means "I want to see it now", so skip the clock check.
-        run: python daily_drafts.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+        run: python daily_drafts.py
 
       - name: Remove the key
         if: always()
