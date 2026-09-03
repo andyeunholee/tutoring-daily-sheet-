@@ -227,7 +227,8 @@ def test_reminder_email_names_the_session_and_links_the_form():
     subject, text, html = remind.build_reminder(_session(), "Joseph")
     assert subject == ("Tutoring report needed: Kyuheon (Andrew) Ahn — "
                        "Aug 29, 1:00 PM–2:30 PM")
-    assert "Hi Joseph," in text and config.TEACHER_FORM_URL in text
+    assert "Dear Joseph teacher," in text and config.TEACHER_FORM_URL in text
+    assert "Dear Joseph teacher," in html
     assert "English" in text
     assert "hasn't been submitted" in html and "Submit the report" in html
     assert "please disregard this message" in text
