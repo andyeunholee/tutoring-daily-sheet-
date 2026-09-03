@@ -192,6 +192,45 @@ python daily_drafts.py --dry-run   # 무엇을 만들지 보기만 함
 python daily_drafts.py             # 실제로 초안 생성
 ```
 
+## 리포트 미제출 독촉 (수업 종료 1시간 후)
+
+캘린더의 `[TUT]` 수업이 끝나고 **60분이 지나도** 같은 날·같은 선생님·같은 학생의
+리포트가 없으면, 담당 선생님께 영어로 이메일을 한 통 보냅니다. **수업당 한 번만**
+보내고, 보낸 기록은 Reports 스프레드시트의 `Reminders` 탭에 남깁니다.
+
+GitHub Actions가 **15분마다** 확인합니다 (`.github/workflows/remind-missing-reports.yml`).
+GitHub 사정으로 몇 분 늦게 돌 수 있어서 실제로는 종료 60~75분 뒤에 도착합니다.
+
+### 캘린더 형식
+
+이벤트 제목이 이 형식이어야 인식됩니다. `[ CLS ]` 그룹 수업이나 메모는 무시합니다.
+
+```
+[TUT] Type: ONLINE, Teacher Name: Joseph teacher, Student Name: Zena, Subject: College Essay
+canceled by student: [TUT] ...        ← 취소된 수업은 독촉하지 않습니다
+```
+
+### 선생님 이메일
+
+Reports 스프레드시트의 **`Teachers` 탭**에서 읽습니다.
+
+| Teacher Name (as in calendar) | Email | Active |
+|---|---|---|
+| Joseph | joseph@example.com | |
+
+이름은 첫 단어만 비교하므로 캘린더의 `Joseph teacher` 와 폼의 `Joseph O'Hailey` 가
+같은 사람으로 잡힙니다. 이메일이 비어 있으면 그 선생님은 건너뛰고 실행 로그에 남깁니다.
+
+### 준비
+
+1. 캘린더 `andy.lee@eliteprep.com` 을 서비스 계정 이메일에 공유 — **"모든 일정 세부정보 보기"**
+2. `Teachers` 탭에 선생님 이메일 채우기
+3. GitHub Secrets는 초안 워크플로와 같은 것을 씁니다. 추가할 것 없음
+
+리포트와 수업을 맞추는 규칙: 날짜가 같고, 선생님 첫 단어가 같고, 학생 이름의 단어가 한쪽이
+다른 쪽에 포함될 때. `Andrew` ↔ `Kyuheon (Andrew) Ahn` 은 잡히고, 오타(`Andrw`)는 못
+잡아서 독촉이 한 번 더 갈 수 있습니다.
+
 ## 웹사이트에 바로가기 링크 걸기
 
 ```html
@@ -210,6 +249,7 @@ python daily_drafts.py             # 실제로 초안 생성
 ```
 app.py                 선생님 입력 폼
 daily_drafts.py        놓친 초안 따라잡기 (Actions에서 수동 실행)
+remind_missing_reports.py  수업 후 1시간 내 미제출 독촉 (Actions, 15분마다)
 review_app.py          원장님 검토·발송 UI
 config.py              경로 / .env / 구글 인증 설정
 src/report.py          리포트 필드 정의와 이메일 HTML·텍스트 생성 (두 앱 공용)
@@ -217,6 +257,9 @@ src/store.py           제출 리포트 저장 + 발송 상태 (Reports Google S
 src/mailer.py          SMTP 발송 (To/Cc)
 src/drafts.py          IMAP으로 Gmail 임시보관함에 초안 저장
 src/students.py        Google Sheet 학생 명부 읽기
+src/teachers.py        Teachers 탭에서 선생님 이메일 읽기
+src/calendar_events.py 캘린더의 [TUT] 수업 읽기
+src/reminder_log.py    독촉 발송 기록 (Reminders 탭)
 src/auth.py            구글 OAuth
 test_logic.py          검증용 테스트 (python test_logic.py)
 ```

@@ -153,6 +153,50 @@ def _rows() -> list[list]:
     return resp.get("values", [])
 
 
+# --- Other tabs in the same spreadsheet -----------------------------------
+# The reports spreadsheet is the one place the service account can write, so
+# small operational tables (teacher emails, reminders already sent) live there
+# too, each on its own tab.
+
+def _sheet_titles() -> list[str]:
+    meta = _service().spreadsheets().get(spreadsheetId=_sheet_id()).execute()
+    return [s["properties"]["title"] for s in meta.get("sheets", [])]
+
+
+def ensure_tab(title: str, header: list[str]) -> bool:
+    """Create the tab with its header row if it is missing. True if created."""
+    if title in _sheet_titles():
+        return False
+    _service().spreadsheets().batchUpdate(
+        spreadsheetId=_sheet_id(),
+        body={"requests": [{"addSheet": {"properties": {"title": title}}}]}).execute()
+    _values().update(
+        spreadsheetId=_sheet_id(), range=f"'{title}'!A1",
+        valueInputOption="RAW", body={"values": [header]}).execute()
+    return True
+
+
+def read_tab(title: str) -> list[list]:
+    """Every row of a tab, header included. A missing tab reads as empty."""
+    try:
+        resp = _values().get(spreadsheetId=_sheet_id(), range=f"'{title}'").execute()
+    except HttpError as e:
+        if getattr(getattr(e, "resp", None), "status", None) == 400:
+            return []       # Sheets answers 400 for a range on a tab that is not there
+        raise _explain(e, f"Reading the {title} tab") from e
+    return resp.get("values", [])
+
+
+def append_row(title: str, row: list) -> None:
+    try:
+        _values().append(
+            spreadsheetId=_sheet_id(), range=f"'{title}'!A:A",
+            valueInputOption="RAW", insertDataOption="INSERT_ROWS",
+            body={"values": [[str(c) for c in row]]}).execute()
+    except HttpError as e:
+        raise _explain(e, f"Writing to the {title} tab") from e
+
+
 # --- The API the apps use -------------------------------------------------
 
 def load_all() -> list[dict]:

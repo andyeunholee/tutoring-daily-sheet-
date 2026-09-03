@@ -69,9 +69,13 @@ _ensure_local_ca_bundle()
 SERVICE_ACCOUNT_PATH = BASE_DIR / "service_account.json"
 CREDENTIALS_PATH = BASE_DIR / "credentials.json"
 TOKEN_PATH = BASE_DIR / "token_tutoring.json"
-# Writing the report store needs more than read-only. If you change this,
-# delete token_tutoring.json so the consent flow runs again.
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+# Writing the report store needs more than read-only; the missing-report
+# reminder reads the tutoring calendar. If you change this, delete
+# token_tutoring.json so the consent flow runs again.
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
 
 # --- Student roster Google Sheet ---
 # The docs.google.com/spreadsheets/d/<ID>/edit part of the sheet URL.
@@ -86,6 +90,19 @@ REPORTS_SPREADSHEET_ID = setting("REPORTS_SPREADSHEET_ID")
 REPORTS_SHEET_NAME = "Reports"
 REPORTS_PATH = BASE_DIR / "pending_reports.json"
 RECORDS_CSV = BASE_DIR / "tutoring_records.csv"
+
+# --- Missing-report reminder ---
+# The calendar holding the "[TUT] ..." sessions. It has to be shared with the
+# service account ("See all event details"), exactly like the spreadsheets.
+CALENDAR_ID = setting("CALENDAR_ID", "andy.lee@eliteprep.com")
+# Where a teacher goes to submit; the reminder email links here.
+TEACHER_FORM_URL = setting(
+    "TEACHER_FORM_URL", "https://3rptsszzfugdsemkjhfugt.streamlit.app/")
+# Both tabs live in the reports spreadsheet, which the service account can edit.
+TEACHERS_SHEET_NAME = "Teachers"
+REMINDERS_SHEET_NAME = "Reminders"
+REMINDER_DELAY_MINUTES = 60      # how long after a session ends before nudging
+REMINDER_LOOKBACK_HOURS = 6      # sessions older than this are left alone
 
 # --- Email ---
 SENDER_EMAIL = setting("SENDER_EMAIL")

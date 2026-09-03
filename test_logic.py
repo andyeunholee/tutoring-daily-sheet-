@@ -3,7 +3,11 @@
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+import config
 import daily_drafts
+import remind_missing_reports as remind
+from src import calendar_events
+from src import teachers as teachers_lib
 from src import drafts as drafts_lib
 from src import report as report_lib
 from src import store
@@ -150,6 +154,82 @@ def test_recipients_prefer_addresses_already_recorded():
 
     unknown = {"report": {"student_name": "Nobody At All"}}
     assert daily_drafts.recipients_for(unknown, roster) == ("", "")
+
+
+def _session(**kw) -> calendar_events.Session:
+    tz = ZoneInfo("America/New_York")
+    base = dict(event_id="evt1", teacher="Joseph", student="Kyuheon (Andrew) Ahn",
+                subject="English", canceled=False,
+                start=datetime(2026, 8, 29, 13, 0, tzinfo=tz),
+                end=datetime(2026, 8, 29, 14, 30, tzinfo=tz))
+    base.update(kw)
+    return calendar_events.Session(**base)
+
+
+def test_calendar_titles_parse_into_sessions():
+    p = calendar_events.parse_summary(
+        " [TUT] Type: In-Person (Room #1), Teacher Name: Joseph teacher, "
+        "Student Name: Kyuheon (Andrew) Ahn, Subject:  English ")
+    assert p == {"teacher": "Joseph", "student": "Kyuheon (Andrew) Ahn",
+                 "subject": "English", "canceled": False}
+    c = calendar_events.parse_summary(
+        "canceled by student: [TUT] Type: ONLINE, Teacher Name:  Jeongbeen teacher, "
+        "Student Name: Bill, Subject: SAT Math & Calculus")
+    assert c["canceled"] and c["teacher"] == "Jeongbeen"
+    assert c["subject"] == "SAT Math & Calculus"
+    # Group classes and to-do notes on the same calendar are not sessions.
+    assert calendar_events.parse_summary(
+        "[ CLS ]: SAT Weekend class- English : room #5] Joseph Teacher") is None
+    assert calendar_events.parse_summary("매일 튜터링 이후에 보고서를 제출할것.") is None
+    assert calendar_events.parse_summary("") is None
+
+
+def test_a_report_is_matched_to_its_session_the_way_teachers_type():
+    s = _session()
+    ok = {"class_date": "2026-08-29", "teacher_name": "Joseph O'Hailey",
+          "student_name": "Andrew"}
+    assert remind.report_matches_session(ok, s)
+    assert remind.report_matches_session({**ok, "student_name": "kyuheon (andrew) ahn"}, s)
+    assert not remind.report_matches_session({**ok, "class_date": "2026-08-28"}, s)
+    assert not remind.report_matches_session({**ok, "teacher_name": "Jeongbeen"}, s)
+    assert not remind.report_matches_session({**ok, "student_name": "Zena"}, s)
+    assert not remind.report_matches_session({**ok, "student_name": "Kim Ahn"}, s)
+    # A typo means no match, and therefore a reminder. Documented, not solved.
+    assert not remind.report_matches_session({**ok, "student_name": "Andrw"}, s)
+
+
+def test_only_sessions_that_ended_an_hour_ago_are_due():
+    tz = ZoneInfo("America/New_York")
+    now = datetime(2026, 8, 29, 16, 0, tzinfo=tz)
+    just_ended = _session(event_id="a", end=datetime(2026, 8, 29, 15, 30, tzinfo=tz))
+    due = _session(event_id="b", end=datetime(2026, 8, 29, 14, 30, tzinfo=tz))
+    canceled = _session(event_id="c", end=datetime(2026, 8, 29, 14, 0, tzinfo=tz),
+                        canceled=True)
+    ancient = _session(event_id="d", end=datetime(2026, 8, 29, 9, 0, tzinfo=tz))
+    picked = remind.sessions_due([just_ended, due, canceled, ancient], now)
+    assert [s.event_id for s in picked] == ["b"]
+
+
+def test_teachers_tab_and_lookup():
+    rows = [["Teacher Name (as in calendar)", "Email", "Active"],
+            ["Joseph", "joseph@x.com", ""],
+            ["Jeongbeen", "", ""],
+            ["Peter", "peter@x.com", "No"]]
+    ts = teachers_lib.parse_teachers(rows)
+    assert teachers_lib.find_teacher(ts, "Joseph teacher").email == "joseph@x.com"
+    assert teachers_lib.find_teacher(ts, "Jeongbeen").email == ""
+    assert teachers_lib.find_teacher(ts, "Peter").active is False
+    assert teachers_lib.find_teacher(ts, "Nobody") is None
+    assert teachers_lib.parse_teachers([]) == []
+
+
+def test_reminder_email_names_the_session_and_links_the_form():
+    subject, text, html = remind.build_reminder(_session(), "Joseph")
+    assert subject == ("Tutoring report needed: Kyuheon (Andrew) Ahn — "
+                       "Aug 29, 1:00 PM–2:30 PM")
+    assert "Hi Joseph," in text and config.TEACHER_FORM_URL in text
+    assert "English" in text
+    assert "hasn't been submitted" in html and "Submit the report" in html
 
 
 def test_address_parsing():

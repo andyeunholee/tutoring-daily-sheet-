@@ -1,0 +1,41 @@
+name: Remind teachers of missing reports
+
+# The schedule is switched on once the calendar is shared with the service
+# account and a manual run comes back green. Until then every scheduled run
+# would fail, and GitHub mails the owner about each one.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   # Every 15 minutes. GitHub may run these a few minutes late under load,
+  #   # which only means a reminder lands at 65 or 75 minutes instead of 60.
+  #   - cron: "*/15 * * * *"
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install google-api-python-client google-auth python-dotenv
+
+      - name: Write the service account key
+        env:
+          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: printf '%s' "$GCP_SERVICE_ACCOUNT_JSON" > service_account.json
+
+      - name: Check the calendar and nudge
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          REPORTS_SPREADSHEET_ID: ${{ secrets.REPORTS_SPREADSHEET_ID }}
+          STUDENTS_SPREADSHEET_ID: ${{ secrets.STUDENTS_SPREADSHEET_ID }}
+        run: python remind_missing_reports.py
+
+      - name: Remove the key
+        if: always()
+        run: rm -f service_account.json
