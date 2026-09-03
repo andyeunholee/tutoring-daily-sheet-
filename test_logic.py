@@ -230,6 +230,8 @@ def test_reminder_email_names_the_session_and_links_the_form():
     assert "Hi Joseph," in text and config.TEACHER_FORM_URL in text
     assert "English" in text
     assert "hasn't been submitted" in html and "Submit the report" in html
+    assert "please disregard this message" in text
+    assert "please disregard this message" in html
 
 
 def test_address_parsing():

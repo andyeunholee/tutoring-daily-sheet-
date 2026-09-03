@@ -78,6 +78,7 @@ def build_reminder(session: Session, teacher_first_name: str) -> tuple[str, str,
         f"The tutoring report for {session.student} ({day}, {span}{subject_part}) "
         "hasn't been submitted yet.\n\n"
         f"Please submit it here: {config.TEACHER_FORM_URL}\n\n"
+        "If you have already submitted it, please disregard this message.\n\n"
         "Thank you,\nElite Prep Suwanee\n")
     html = (
         '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;'
@@ -87,6 +88,7 @@ def build_reminder(session: Session, teacher_first_name: str) -> tuple[str, str,
         f"({escape(day)}, {escape(span)}{escape(subject_part)}) hasn't been "
         "submitted yet.</p>"
         f'<p><a href="{escape(config.TEACHER_FORM_URL)}">Submit the report</a></p>'
+        "<p>If you have already submitted it, please disregard this message.</p>"
         "<p>Thank you,<br>Elite Prep Suwanee</p></div>")
     return subject, text, html
 
