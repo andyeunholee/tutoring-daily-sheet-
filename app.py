@@ -8,7 +8,6 @@ import config
 from src import drafts
 from src import report as report_lib
 from src import store
-from src.mailer import send_email
 from src.students import find_student
 
 # Page Config
@@ -269,56 +268,38 @@ if submitted:
 
     st.success("Data saved successfully!")
 
-    # 3. Queue it for the director's review app.
-    # Never let this stop step 4: emailing the director is how the report
-    # actually reaches a human, and it worked long before the review queue
-    # existed. A teacher who has finished a lesson should not lose their write-up
-    # because a spreadsheet is misconfigured.
+    # 3. Queue it for the director's review app. A failure here must not stop
+    # step 4: the draft is now the only copy that reaches the director, so it
+    # gets made whether or not the queue took the report.
     entry_id = None
     try:
         entry_id = store.add(entry, config.LOCAL_TZ)
     except Exception as e:
-        st.warning(f"Saved and emailed, but not queued for review: {e}")
+        st.warning(f"Saved, but not queued for review: {e}")
 
-    # 4. Send Email to the director
-    if config.RECEIVER_EMAIL:
-        success, msg = send_email(
-            report_lib.email_subject(entry), text_body, html_body,
-            config.RECEIVER_EMAIL,
-            sender=config.SENDER_EMAIL, password=config.SENDER_PASSWORD,
-            host=config.SMTP_HOST, port=config.SMTP_PORT,
-        )
-        if success:
-            st.success(msg)
-            with st.expander("View Sent Email"):
-                st.components.v1.html(html_body, height=600, scrolling=True)
-        else:
-            st.error(msg)
-    else:
-        st.warning("Receiver email not configured.")
-        with st.expander("View Generated Report"):
-            st.components.v1.html(html_body, height=600, scrolling=True)
-
-    # 5. Leave the parent email as a draft while the lesson is still fresh, so
-    # the director only has to read it and press send. Nothing goes out here.
-    # A failure leaves the report pending, which the Prepare parent drafts
-    # workflow can pick up later; it must never cost the teacher their write-up.
-    if entry_id:
-        try:
-            match = find_student(roster(), entry.get("student_name", ""))
-            to = match.parent_email if match else ""
-            cc = match.student_email if match else ""
-            ok, why = drafts.save_drafts(
-                [drafts.build_report_draft(entry, to, cc, config.SENDER_EMAIL)],
-                sender=config.SENDER_EMAIL, password=config.SENDER_PASSWORD)[0]
-            if ok:
+    # 4. Leave the parent email as a draft in the director's Gmail while the
+    # lesson is still fresh. Nothing is sent from here, to anyone: the director
+    # reads the draft and presses send. No notification mail goes out either;
+    # the draft appearing is the notification.
+    try:
+        match = find_student(roster(), entry.get("student_name", ""))
+        to = match.parent_email if match else ""
+        cc = match.student_email if match else ""
+        ok, why = drafts.save_drafts(
+            [drafts.build_report_draft(entry, to, cc, config.SENDER_EMAIL)],
+            sender=config.SENDER_EMAIL, password=config.SENDER_PASSWORD)[0]
+        if ok:
+            if entry_id:
                 store.mark_drafted(entry_id, to, cc)
-                st.success(
-                    f"Parent draft ready in Gmail, addressed to {to}." if to
-                    else "Parent draft ready in Gmail. No roster match for this "
-                         "name, so the address was left blank.")
-            else:
-                st.warning(f"Parent draft not prepared: {why}")
-        except Exception as e:
-            st.warning(f"Parent draft not prepared: {e}")
+            st.success(
+                f"Parent draft ready in Gmail, addressed to {to}." if to
+                else "Parent draft ready in Gmail. No roster match for this "
+                     "name, so the address was left blank.")
+        else:
+            st.warning(f"Parent draft not prepared: {why}")
+    except Exception as e:
+        st.warning(f"Parent draft not prepared: {e}")
+
+    with st.expander("View Generated Report"):
+        st.components.v1.html(html_body, height=600, scrolling=True)
 

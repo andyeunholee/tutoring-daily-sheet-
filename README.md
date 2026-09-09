@@ -1,7 +1,7 @@
 # EP Tutoring Daily Sheet
 
-선생님이 튜터링 요약을 작성 → 원장님에게 이메일 발송 → 원장님이 검토·수정 후
-학부모(To)와 학생(Cc)에게 발송하는 2단계 흐름입니다.
+선생님이 튜터링 요약을 작성 → 원장님 Gmail에 학부모용 초안이 생성 → 원장님이 검토·수정 후
+학부모(To)와 학생(Cc)에게 직접 발송하는 2단계 흐름입니다.
 
 ## 앱 두 개
 
@@ -21,12 +21,12 @@ streamlit run app.py
 streamlit run review_app.py --server.port 8502
 ```
 
-선생님이 Submit을 누르면 세 가지가 한 번에 일어납니다.
+선생님이 Submit을 누르면 두 가지가 한 번에 일어납니다.
 
 1. 리포트가 Reports 시트에 저장됩니다
-2. 원장님 이메일(`RECEIVER_EMAIL`)로 알림이 갑니다
-3. **학부모용 메일이 Gmail 임시보관함에 초안으로 만들어집니다** — 발송은 되지 않습니다
+2. **학부모용 메일이 Gmail 임시보관함에 초안으로 만들어집니다** — 발송은 되지 않습니다
 
+원장님께 따로 알림 메일은 가지 않습니다. 임시보관함에 초안이 생기는 것이 곧 알림입니다.
 원장님은 Gmail에서 초안을 읽고 다듬어 직접 보내시면 됩니다. 검토 앱에서 수정한 뒤
 보내는 방법도 그대로 쓸 수 있습니다.
 
@@ -174,7 +174,7 @@ GitHub Actions에서 돌아갑니다 (`.github/workflows/prepare-drafts.yml`).
 |---|---|
 | `SENDER_EMAIL` | 보내는 Gmail 주소 (초안도 이 계정에 생깁니다) |
 | `SENDER_PASSWORD` | Gmail 앱 비밀번호 |
-| `RECEIVER_EMAIL` | 선생님 제출 알림을 받을 주소 |
+| `RECEIVER_EMAIL` | 지금은 쓰이지 않음 (제출 알림 메일을 없앴습니다). 비워두어도 됩니다 |
 | `REPORTS_SPREADSHEET_ID` | 리포트 시트 ID |
 | `STUDENTS_SPREADSHEET_ID` | 명부 시트 ID |
 | `GCP_SERVICE_ACCOUNT_JSON` | `service_account.json` **파일 내용 전체** |
